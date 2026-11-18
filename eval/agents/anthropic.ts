@@ -5,7 +5,7 @@ import type { Agent, AgentResult, Limits, Task, ToolSet } from "../types.js";
 // Messages API shape; the tests run it against a stand-in HTTP server, so what is
 // verified is the request/response handling and the tool loop, not any model.
 export interface AnthropicConfig {
-  baseUrl: string; // e.g. https://gateway.example, without /v1/messages
+  baseUrl: string; // e.g. https://gateway.example or https://gateway.example/v1; /v1/messages is appended once
   apiKey: string;
   model: string;
   priceInPerMTok?: number; // USD per million input tokens; omit and cost is reported as unknown
@@ -44,7 +44,7 @@ export function anthropicAgent(cfg: AnthropicConfig): Agent {
       for (let turn = 0; turn < limits.maxTurns; turn++) {
         let res: Response;
         try {
-          res = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/v1/messages`, {
+          res = await fetch(`${cfg.baseUrl.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/messages`, {
             method: "POST",
             headers: { "content-type": "application/json", "x-api-key": cfg.apiKey, "anthropic-version": "2023-06-01" },
             body: JSON.stringify({

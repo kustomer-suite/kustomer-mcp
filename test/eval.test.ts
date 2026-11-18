@@ -179,7 +179,7 @@ describe("raw REST tool set", () => {
 });
 
 describe("the model agent, against a stand-in Messages API", () => {
-  interface Seen { headers: Record<string, string | string[] | undefined>; body: any }
+  interface Seen { url?: string; headers: Record<string, string | string[] | undefined>; body: any }
   let url: string;
   let seen: Seen[];
   let replies: Array<{ status?: number; json?: unknown }>;
@@ -190,7 +190,7 @@ describe("the model agent, against a stand-in Messages API", () => {
       let data = "";
       req.on("data", (c) => (data += c));
       req.on("end", () => {
-        seen.push({ headers: req.headers, body: JSON.parse(data || "{}") });
+        seen.push({ url: req.url, headers: req.headers, body: JSON.parse(data || "{}") });
         const r = replies.shift() ?? { status: 500 };
         res.writeHead(r.status ?? 200, { "content-type": "application/json" });
         res.end(JSON.stringify(r.json ?? { error: "SECRET-KEY-ECHO" }));
@@ -212,6 +212,15 @@ describe("the model agent, against a stand-in Messages API", () => {
     };
   };
   const task = tasks[0]!;
+
+  it("posts to /v1/messages once, whether the base URL ends with /v1 or not", async () => {
+    for (const base of [url, `${url}/`, `${url}/v1`, `${url}/v1/`]) {
+      seen = [];
+      replies = [{ json: { stop_reason: "end_turn", content: [{ type: "text", text: "{}" }], usage: { input_tokens: 1, output_tokens: 1 } } }];
+      await anthropicAgent({ baseUrl: base, apiKey: "k", model: "m" }).run(task, tool(), limits);
+      expect(seen.map((s) => s.url)).toEqual(["/v1/messages"]);
+    }
+  });
 
   it("runs the tool loop, sends the tools, counts tokens and prices them only when told the prices", async () => {
     seen = [];
