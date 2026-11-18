@@ -2,7 +2,9 @@
 
 An [MCP](https://modelcontextprotocol.io) server for [Kustomer Suite](https://kustomersuite.com), an AI customer-service platform for Indonesian businesses (WhatsApp, live chat, and more). It lets an agent such as Claude or Cursor work with a store's customer conversations: find the customers waiting for a human, read a thread together with *how the bot answered*, check the knowledge base the way the bot does, and see which of the store's own tools the bot called and why they failed.
 
-> **Status: v0.1, experimental, read-only.** Five tools, tested against a fake REST API. It has not yet been run against a live Kustomer Suite deployment, and store-scoped access tokens are not implemented yet (see [Roadmap](#roadmap)). Everything in this repository uses synthetic data.
+> **Status: v0.1, experimental, read-only.** Five tools, tested against a fake REST API and run once against a pre-production Kustomer Suite deployment holding test data. Store-scoped access tokens are not implemented yet (see [Roadmap](#roadmap)). Everything in this repository uses synthetic data.
+>
+> **Known limitation:** `get_conversation` asks the API not to mark a conversation as read (`mark_read=false`), but the API does not honor that parameter yet. Until it does, reading a conversation through this server marks its messages as read for the store's human agents.
 
 ## Tools
 
@@ -60,7 +62,7 @@ Each protection was verified by removing it and checking that the check guarding
 
 ## Roadmap
 
-- Run against a live deployment and fix what the fake API hid.
+- Reading a conversation without marking it as read (needs the API to honor `mark_read=false`).
 - Store-scoped access tokens with read/write scopes and revocation (needs support in the API).
 - Write tools (reply, take over a conversation, edit knowledge) behind explicit confirmation.
 - Streamable HTTP transport and a Supabase Edge Function deployment.
