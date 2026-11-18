@@ -4,7 +4,7 @@ An [MCP](https://modelcontextprotocol.io) server for [Kustomer Suite](https://ku
 
 > **Status: v0.2, experimental, read-only.** Five tools. The production server is written in Go inside the Kustomer Suite API and passes the conformance suite in this repository (12 of 12 checks against a database seeded with the fixture); `kustomersuite-mcp` on npm is a thin stdio proxy to it. Everything in this repository uses synthetic data.
 >
-> **Rollout:** the hosted endpoint, `https://mcp.kustomersuite.com/mcp`, is verified on staging; the production rollout (DNS, TLS, deploy) is not finished, so the npm package cannot reach a server yet. Do not publish or install it before that is announced here.
+> **Rollout:** the hosted endpoint, `https://mcp.kustomersuite.com/mcp`, is live and was checked on staging and, read-only, on production (2026-11-18). `kustomersuite-mcp` 0.2 is **not published to npm yet**. Access tokens are issued by the maintainer for now; there is no self-service screen.
 
 ## Tools
 
@@ -66,7 +66,7 @@ Each protection was verified by removing it and checking that the check guarding
 
 ## Roadmap
 
-- Production rollout of the hosted endpoint, then publishing `kustomersuite-mcp` 0.2.
+- Publishing `kustomersuite-mcp` 0.2 to npm (the hosted endpoint is already live).
 - A dashboard screen to create, scope and revoke tokens; OAuth for remote MCP clients.
 - Write tools (reply, take over a conversation, edit knowledge) behind explicit confirmation.
 - A Supabase Edge Function deployment of the TypeScript server, and a small demo and documentation site.
