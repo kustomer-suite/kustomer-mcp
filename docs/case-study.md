@@ -47,7 +47,8 @@ These are the useful part:
 
 ## What is not done
 
-- **No task-level evaluation yet.** The claim that the server helps an agent is not measured. The plan is 15 to 30 tasks on a synthetic store ("find three conversations waiting for a human and summarise the problem", "why did the bot get the price wrong in conversation X"), graded deterministically where possible, comparing an agent with the server against one without it: completion, tool calls, tokens, cost, time. Until that runs, there is no number here and none should be inferred.
+- **No task-level result yet.** Whether the server helps an agent is not measured. What exists is the harness ([`eval/`](../eval/README.md)): 11 tasks on a synthetic store, graded deterministically, comparing an agent with the server against one with raw REST access (an agent with no tools at all would score 0% and prove nothing). Its tests show every task is solvable in both conditions, that the graders refuse wrong and almost-right answers, and that six deliberate faults in the harness itself are caught. It has not been run with a model: that needs a key and a budget.
+- **One model-independent finding, narrowly stated.** With a fixed program standing in for the agent, raw REST access put protected values in front of it in 4 of 11 runs (phone numbers, a store tool's password and endpoint, an email); the server, 0 of 11. That is a property of the endpoints on a fake API built to mirror the real shapes, not a statement about any model.
 - Verified on staging, **not on production**; real clients (Claude Desktop, Cursor) through the public host are untested.
 - The rate-limit numbers (60 calls a minute, 10 searches a minute) are a first guess, kept in memory per process; with several API instances the effective budget multiplies.
 - The paid embedding call is replaced by a stub in the tests; the pgvector query and its store filter are real.
