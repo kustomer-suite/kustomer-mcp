@@ -1,4 +1,4 @@
-# kustomer-mcp
+# kustomersuite-mcp
 
 An [MCP](https://modelcontextprotocol.io) server for [Kustomer Suite](https://kustomersuite.com), an AI customer-service platform for Indonesian businesses (WhatsApp, live chat, and more). It lets an agent such as Claude or Cursor work with a store's customer conversations: find the customers waiting for a human, read a thread together with *how the bot answered*, check the knowledge base the way the bot does, and see which of the store's own tools the bot called and why they failed.
 
@@ -34,11 +34,11 @@ Requires Node 20+.
 ```json
 {
   "mcpServers": {
-    "kustomer": {
+    "kustomersuite": {
       "command": "npx",
-      "args": ["-y", "kustomer-mcp"],
+      "args": ["-y", "kustomersuite-mcp"],
       "env": {
-        "KUSTOMER_API_URL": "https://api.example.com",
+        "KUSTOMER_API_URL": "https://api.kustomersuite.com",
         "KUSTOMER_TOKEN": "…",
         "KUSTOMER_STORE_ID": "…"
       }
@@ -47,7 +47,7 @@ Requires Node 20+.
 }
 ```
 
-The package is not published to npm yet; until then, `npm install && npm run build` and point `command` at `node dist/src/cli.js`.
+Published on npm as [`kustomersuite-mcp`](https://www.npmjs.com/package/kustomersuite-mcp). To run from source instead: `npm install && npm run build`, then point `command` at `node dist/src/cli.js`.
 
 ## Conformance suite
 

@@ -1,17 +1,42 @@
 {
-  "name": "kustomer-mcp",
+  "name": "kustomersuite-mcp",
   "version": "0.1.0",
   "description": "MCP server for Kustomer Suite: let an agent read a store's customer conversations, knowledge base, bot tool calls and usage.",
   "license": "MIT",
-  "private": true,
+  "author": "Andi Kurniawan <https://github.com/andixurniawan>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kustomer-suite/kustomer-mcp.git"
+  },
+  "homepage": "https://github.com/kustomer-suite/kustomer-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/kustomer-suite/kustomer-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "customer-service",
+    "whatsapp",
+    "kustomer"
+  ],
   "type": "module",
-  "engines": { "node": ">=20" },
-  "bin": { "kustomer-mcp": "dist/src/cli.js" },
-  "files": ["dist/src", "spec"],
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "kustomersuite-mcp": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "spec",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -21,5 +46,8 @@
     "@types/node": "^22.10.0",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

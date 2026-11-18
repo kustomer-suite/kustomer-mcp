@@ -6,7 +6,7 @@ import { createServer } from "./server.js";
 function required(name: string): string {
   const v = process.env[name];
   if (!v) {
-    console.error(`kustomer-mcp: ${name} is not set`);
+    console.error(`kustomersuite-mcp: ${name} is not set`);
     process.exit(1);
   }
   return v;
