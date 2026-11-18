@@ -69,4 +69,4 @@ Each protection was verified by removing it and checking that the check guarding
 
 ## License
 
-No license has been chosen yet, so all rights are reserved for now. Built by Andik Xurniawan.
+[MIT](LICENSE). Built by Andik Xurniawan.
