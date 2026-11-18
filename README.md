@@ -69,4 +69,4 @@ Each protection was verified by removing it and checking that the check guarding
 
 ## License
 
-[MIT](LICENSE). Built by Andik Xurniawan.
+[MIT](LICENSE). Built by [Andi Kurniawan](https://github.com/andixurniawan).
