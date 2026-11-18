@@ -2,7 +2,7 @@
   "name": "kustomer-mcp",
   "version": "0.1.0",
   "description": "MCP server for Kustomer Suite: let an agent read a store's customer conversations, knowledge base, bot tool calls and usage.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" },
