@@ -1,6 +1,6 @@
 {
   "name": "kustomersuite-mcp",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "MCP server for Kustomer Suite: let an agent read a store's customer conversations, knowledge base, bot tool calls and usage.",
   "license": "MIT",
   "author": "Andi Kurniawan <https://github.com/andixurniawan>",

@@ -180,9 +180,13 @@ export const checks: Check[] = [
       const m = (three.messages as Array<{ historical?: boolean; sent_at: string }>)[0]!;
       expect(m.historical === true && m.sent_at === "2026-10-01T09:00:00Z", "historical messages keep their original time");
 
+      // Message ids are whatever the server's store assigns (UUIDs in a database,
+      // the fixture's own ids in a fake API), so compare against the full thread.
+      const fullIds = (one.messages as Array<{ id: string }>).map((x) => x.id);
       const short = await ok(client, "get_conversation", { conversation_id: c1!.id, max_messages: 2 });
       const kept = (short.messages as Array<{ id: string }>).map((x) => x.id);
-      expect(short.truncated === true && JSON.stringify(kept) === JSON.stringify(["m1-3", "m1-4"]), `max_messages keeps the latest: ${kept}`);
+      expect(fullIds.length === 4, `c1 has 4 messages, got ${fullIds.length}`);
+      expect(short.truncated === true && JSON.stringify(kept) === JSON.stringify(fullIds.slice(-2)), `max_messages keeps the latest: ${kept}`);
     },
   },
   {
