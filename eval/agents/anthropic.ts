@@ -11,6 +11,8 @@ export interface AnthropicConfig {
   priceInPerMTok?: number; // USD per million input tokens; omit and cost is reported as unknown
   priceOutPerMTok?: number;
   maxTokens?: number;
+  retries?: number; // extra attempts when the endpoint answers 429 or 5xx (default 3); a run lost to an outage says nothing about the model
+  retryDelayMs?: number; // base delay, multiplied by the attempt number (default 2000)
 }
 
 const SYSTEM = `You help the owner of a store find out what happened in their customer conversations, and why the store's bot behaved as it did.
@@ -43,25 +45,31 @@ export function anthropicAgent(cfg: AnthropicConfig): Agent {
       };
 
       for (let turn = 0; turn < limits.maxTurns; turn++) {
-        let res: Response;
-        try {
-          res = await fetch(`${cfg.baseUrl.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/messages`, {
-            method: "POST",
-            headers: { "content-type": "application/json", "x-api-key": cfg.apiKey, "anthropic-version": "2023-06-01" },
-            body: JSON.stringify({
-              model: cfg.model,
-              max_tokens: cfg.maxTokens ?? 1024,
-              stream: false, // some gateways answer with an SSE stream unless told not to
-              system: SYSTEM,
-              tools: tools.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
-              messages,
-            }),
-          });
-        } catch (e) {
-          return done("", "error", `request failed: ${(e as Error).message}`);
+        let res: Response | undefined;
+        const attempts = (cfg.retries ?? 3) + 1;
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+          try {
+            res = await fetch(`${cfg.baseUrl.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/messages`, {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-api-key": cfg.apiKey, "anthropic-version": "2023-06-01" },
+              body: JSON.stringify({
+                model: cfg.model,
+                max_tokens: cfg.maxTokens ?? 1024,
+                stream: false, // some gateways answer with an SSE stream unless told not to
+                system: SYSTEM,
+                tools: tools.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
+                messages,
+              }),
+            });
+          } catch (e) {
+            return done("", "error", `request failed: ${(e as Error).message}`);
+          }
+          const transient = res.status === 429 || res.status >= 500;
+          if (!transient || attempt === attempts) break;
+          await new Promise((r) => setTimeout(r, (cfg.retryDelayMs ?? 2000) * attempt));
         }
-        if (!res.ok) return done("", "error", `the endpoint answered HTTP ${res.status}`); // the body is not echoed: it may repeat credentials
-        const body = (await res.json()) as { model?: string; content?: Block[]; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };
+        if (!res!.ok) return done("", "error", `the endpoint answered HTTP ${res!.status}`); // the body is not echoed: it may repeat credentials
+        const body = (await res!.json()) as { model?: string; content?: Block[]; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };
         if (body.model) models.add(body.model);
         inputTokens += body.usage?.input_tokens ?? 0;
         outputTokens += body.usage?.output_tokens ?? 0;

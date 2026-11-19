@@ -51,7 +51,7 @@ are written to `eval-results/` as JSON and Markdown.
 
 ## Results
 
-A model run (66 runs: 11 tasks × 3 × 2 conditions) is written up in [`docs/eval-results.md`](../docs/eval-results.md): equal success (33/33 each), and the agent was shown protected data in 12/33 raw-REST runs against 0/33 with the server. Read it with its limits: one model, easy tasks, a ceiling effect.
+Two model runs (11 tasks × 3 × 2 conditions each) are written up in [`docs/eval-results.md`](../docs/eval-results.md). Opus 5.0: equal success (33/33 each), and the agent was shown protected data in 12/33 raw-REST runs against 0/33 with the server. Sonnet 5.5: equal success (31/31 scored each; 4 runs lost to gateway 503s are not scored), shown in 11/31 against 0/31. Read them with their limits: two strong models, easy tasks, a ceiling effect.
 
 ## The oracle, and what it proves
 
@@ -61,5 +61,5 @@ The `oracle` agent is **not a model**: it is a fixed program that solves each ta
 
 - 11 tasks, one store, synthetic data; a strong model passes them all, so success cannot separate the conditions.
 - No prompt-injection task yet: it needs a rubric, and a model judging a model is exactly what the graders avoid.
-- Only one model, through a gateway that adds its own prompt; the harness records the model each run reports.
+- Two models, through a gateway that adds its own prompt; the harness records the model each run reports. A run the endpoint fails (HTTP 429/5xx after retries) is reported as not scored, not as a wrong answer.
 - The local `mcp` condition goes through the TypeScript reference server. The hosted server passes the same conformance suite, but the evaluation itself has not been pointed at it.
