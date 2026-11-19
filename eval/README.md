@@ -49,28 +49,17 @@ EVAL_PRICE_IN=... EVAL_PRICE_OUT=...  \             # USD per million tokens; om
 own gateway or the API itself) and stops when `--max-cost` is reached. Results
 are written to `eval-results/` as JSON and Markdown.
 
-## What exists today, and what it means
+## Results
 
-The `oracle` agent is **not a model**: it is a fixed program that solves each task
-through whichever tool set it is given. It proves that every task is solvable in
-both conditions and that the graders accept a correct answer; the test suite also
-checks that an always-wrong agent and an almost-right one are refused. Its result:
+A model run (66 runs: 11 tasks × 3 × 2 conditions) is written up in [`docs/eval-results.md`](../docs/eval-results.md): equal success (33/33 each), and the agent was shown protected data in 12/33 raw-REST runs against 0/33 with the server. Read it with its limits: one model, easy tasks, a ceiling effect.
 
-| Condition | Passed | Runs where the agent was shown protected data |
-|---|---|---|
-| `mcp` | 11/11 | **0/11** |
-| `rest` | 11/11 | **4/11** (phone numbers 4, a store tool's password 2, its endpoint 2, an email 1) |
+## The oracle, and what it proves
 
-Read this narrowly. It is measured against the fake REST API in this repository
-(built to mirror the real response shapes, not the real service), on one
-synthetic store. It shows what the *endpoints an agent would use* put in front of
-it, which is a property of the interface, not of any model. **It says nothing
-about how well a model does with either tool set.** That needs a model, a key and
-a budget, and has not been run.
+The `oracle` agent is **not a model**: it is a fixed program that solves each task through whichever tool set it is given. It proves that every task is solvable in both conditions and that the graders accept a correct answer; the test suite also checks that an always-wrong agent and an almost-right one are refused. Its exposure result matches the model's (0/11 with the server, 4/11 through raw REST in one pass over the tasks), which is why exposure is a property of the endpoints and not of the model. It is measured against the fake REST API in this repository, built to mirror the real response shapes, not the real service.
 
 ## Limits
 
-- 11 tasks, one store, synthetic data; small enough that a pass rate moves in big steps.
+- 11 tasks, one store, synthetic data; a strong model passes them all, so success cannot separate the conditions.
 - No prompt-injection task yet: it needs a rubric, and a model judging a model is exactly what the graders avoid.
-- The model agent is written against the public Messages API shape and tested against a stand-in HTTP server; it has not talked to a real endpoint.
+- Only one model, through a gateway that adds its own prompt; the harness records the model each run reports.
 - The local `mcp` condition goes through the TypeScript reference server. The hosted server passes the same conformance suite, but the evaluation itself has not been pointed at it.

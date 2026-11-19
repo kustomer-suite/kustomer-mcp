@@ -70,7 +70,7 @@ Each protection was verified by removing it and checking that the check guarding
 - A dashboard screen to create, scope and revoke tokens; OAuth for remote MCP clients.
 - Write tools (reply, take over a conversation, edit knowledge) behind explicit confirmation.
 - A Supabase Edge Function deployment of the TypeScript server, and a small demo and documentation site.
-- Task-level evals: the harness exists ([`eval/`](eval/README.md)); running it with a model, with and without the server, is next.
+- Task-level evals: first result in [`docs/eval-results.md`](docs/eval-results.md) (one model, 11 easy tasks: equal success, protected data shown in 12/33 raw-REST runs and 0/33 with the server); harder tasks and more models next.
 
 ## License
 

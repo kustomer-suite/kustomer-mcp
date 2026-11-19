@@ -1,6 +1,6 @@
 # Case study: giving an agent read access to a store's customer conversations
 
-*Status: written from what is verified today. The task-level evaluation (does the agent do better with the server than without it) is not done yet; the last section says what exists and what does not.*
+*Status: written from what is verified today. The task-level evaluation (does the agent do better with the server than without it) has a first result in [eval-results](eval-results.md); the last section says what it shows and what it does not.*
 
 ## The problem
 
@@ -47,7 +47,7 @@ These are the useful part:
 
 ## What is not done
 
-- **No task-level result yet.** Whether the server helps an agent is not measured. What exists is the harness ([`eval/`](../eval/README.md)): 11 tasks on a synthetic store, graded deterministically, comparing an agent with the server against one with raw REST access (an agent with no tools at all would score 0% and prove nothing). Its tests show every task is solvable in both conditions, that the graders refuse wrong and almost-right answers, and that six deliberate faults in the harness itself are caught. It has not been run with a model: that needs a key and a budget.
+- **The task-level result is narrow.** On 11 tasks on a synthetic store, one model passed every task both with the server and with raw REST (33/33 each), so success did not separate them. What separated them is what the agent was shown: protected data in 12 of 33 raw-REST runs and 0 of 33 with the server ([eval-results](eval-results.md)). Harder tasks, other models and a prompt-injection task are not done.
 - **One model-independent finding, narrowly stated.** With a fixed program standing in for the agent, raw REST access put protected values in front of it in 4 of 11 runs (phone numbers, a store tool's password and endpoint, an email); the server, 0 of 11. That is a property of the endpoints on a fake API built to mirror the real shapes, not a statement about any model.
 - Verified on staging and, read-only, on production (2026-11-18: authentication, the five tools, store isolation, redaction against real rows that contain emails and phone numbers, rate limit, audit). Real clients such as Claude Desktop and Cursor through the public host are untested, as are several server instances and load. Search relevance (`search_knowledge`) has not been evaluated.
 - The rate-limit numbers (60 calls a minute, 10 searches a minute) are a first guess, kept in memory per process; with several API instances the effective budget multiplies.
