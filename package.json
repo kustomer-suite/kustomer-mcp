@@ -47,6 +47,7 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "esbuild": "^0.28.2",
+    "postgres": "3.4.9",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
   },

@@ -12,7 +12,8 @@ export type ToolHandler = (args: Record<string, any>, ctx: ToolContext) => Promi
 interface ConversationRow {
   id: string;
   channel?: string;
-  status?: string;
+  status?: string; // production: OPEN | CLOSED | ARCHIVED. Older fixtures: read | unread.
+  unread?: boolean; // production (AGEN-57): never opened, or a message arrived since; clients use this, not status
   handover_status?: string;
   started_at?: string;
   last_message_at?: string;
@@ -96,7 +97,8 @@ const listConversations: ToolHandler = async (args, { api, redact }) => {
         id: c.id,
         channel: c.channel ?? "",
         handover_status: handoverStatus(c.handover_status),
-        unread: c.status === "unread",
+        // The API says `unread` itself; `status === "unread"` is the older convention the fixtures still use.
+        unread: c.unread ?? c.status === "unread",
         last_activity_at: c.last_message_at || c.started_at || "",
         message_count: c.message_count ?? 0,
         last_message_preview: c.last_message_preview ? untrusted("conversation", c.last_message_preview, redact) : undefined,

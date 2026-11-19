@@ -1,6 +1,6 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
-import { fixture as basicFixture, fixtureFetch, type Fixture } from "../conformance/fake-api.js";
+import { fixture as basicFixture, fixtureFetch, handlerFetch, type Fixture, type FixtureHandler } from "../conformance/fake-api.js";
 import { buildHardFixture } from "../eval/fixture-hard.js";
 import { createServer } from "../src/server.js";
 import { specFrom, type Spec } from "../src/spec.js";
@@ -15,7 +15,10 @@ import specJson from "../spec/tools.json" with { type: "json" };
 
 export interface EdgeOptions {
   token?: string; // the demo token; unset means every request is refused
-  fixture?: "hard" | "basic"; // hard: 51 conversations, a long thread, planted instructions. basic: the conformance fixture.
+  fixture?: "hard" | "basic"; // hard: 56 conversations, a long thread, planted instructions. basic: the conformance fixture.
+  // Answer from a database instead of from the bundled fixture (see edge/db-handler.ts). The server is given
+  // `token` as its REST credential, which `handler` must accept: it is internal, never the demo token.
+  backend?: { handler: FixtureHandler; storeId: string; token: string };
 }
 
 const spec = specFrom(specJson as unknown as Spec);
@@ -49,7 +52,9 @@ export async function handleMcp(req: Request, opts: EdgeOptions): Promise<Respon
   const basic = opts.fixture === "basic";
   const fx: Fixture = basic ? basicFixture : hard;
   const server = createServer(
-    { baseUrl: "http://fixture.invalid", token: fx.token, storeId: fx.store.id, fetch: fixtureFetch(fx, { nearestAlways: !basic }) },
+    opts.backend
+      ? { baseUrl: "http://database.invalid", token: opts.backend.token, storeId: opts.backend.storeId, fetch: handlerFetch(opts.backend.handler) }
+      : { baseUrl: "http://fixture.invalid", token: fx.token, storeId: fx.store.id, fetch: fixtureFetch(fx, { nearestAlways: !basic }) },
     spec,
   );
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });

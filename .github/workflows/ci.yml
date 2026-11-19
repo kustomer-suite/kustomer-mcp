@@ -11,6 +11,17 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # The sandbox's database tests need Postgres with pgvector.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_PASSWORD: pw
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SANDBOX_TEST_DB_URL: postgres://postgres:pw@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
