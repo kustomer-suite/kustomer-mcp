@@ -9,14 +9,13 @@ The TypeScript server, the same five tools and the same contract (`spec/tools.js
 
 ## What is not verified
 
-- The conformance tests have not been run against the deployed function: they need the `basic` fixture and the deployed one serves `hard`. The 24 of 24 above is the same bundle in a local Deno process.
 - Cold start and memory under load are not measured. Unauthenticated requests to the deployed function took about 0.1 seconds warm (first call 0.22 seconds, including the TLS handshake); that says nothing about a call that runs a tool.
 - There is no rate limit of its own beyond the platform's.
 - Claude Desktop, Cursor and claude.ai have not been pointed at the deployed URL.
 
 ## Verified on Supabase (2026-11-19)
 
-The maintainer deployed it to a Supabase project. From outside: `tools/list` with the demo token returned the five tools with the current contract text; a request without a token or with a wrong one got 401; `OPTIONS` got 204; the response headers (`x-deno-execution-id`, `sb-project-ref`, `x-sb-edge-region`) show it ran on Supabase's edge.
+The maintainer deployed it to a Supabase project. **The 24 hosted conformance tests passed against the deployed function: 24 of 24** (with the `basic` fixture switched on for the run, then switched back to `hard`). With the `hard` fixture, 11 further checks passed from outside: five tools, a store of more than one page, the long thread cut and flagged `truncated`, a planted instruction arriving as wrapped customer text, no store-tool secret in the tool-call output, the search never saying "nothing found", the token in the header or the URL, and 401 without or with a wrong token. Authenticated calls took 0.53 seconds the first time and 0.06 to 0.13 seconds after that. Also from outside: `tools/list` with the demo token returned the five tools with the current contract text; a request without a token or with a wrong one got 401; `OPTIONS` got 204; the response headers (`x-deno-execution-id`, `sb-project-ref`, `x-sb-edge-region`) show it ran on Supabase's edge.
 
 ## Deploy
 

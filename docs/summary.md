@@ -19,8 +19,9 @@ The server is the smaller part. The point of the project is **how it was checked
 | Mutation testing: each protection removed, its test must fail | 15 of 15 killed |
 | Task success, two models, 11 tasks, with the server vs raw REST | Equal: 33/33 each (Opus 5.0); 31/31 each, 62 of 66 runs scored (Sonnet 5.5) |
 | Protected data shown to the agent, same runs | Raw REST: 12 of 33 and 11 of 31 runs. With the server: 0 |
+| Harder suite (paging, long thread, tally, uncovered question, 3 planted injections), Sonnet 5.5 | Server 33/33, raw REST 30/33; all three misses on paging and tallying tasks. Planted instructions obeyed: 0 of 9 in both |
 
-Success did not separate the two conditions: the tasks are too easy for these models. What separates them is what the agent is shown, and that is a property of the endpoints, not of the model.
+On the first suite success did not separate the two conditions: the tasks are too easy. On the harder one it did, slightly: three raw-REST misses on tasks that need paging or counting, which is three runs on two tasks and one model, so a signal and not a result. What separates the conditions every time is what the agent is shown, and that is a property of the endpoints, not of the model. The model never obeyed a planted instruction in either condition, so these runs say nothing about whether the server's `untrusted` wrapper helps against injection.
 
 ## What using it on a real store found
 
@@ -32,4 +33,4 @@ None of these is a leak; a contract suite does not look for them.
 
 ## What is not done
 
-The harder suite has not been run with a model yet. Claude Desktop and Cursor have not been tried. `search_knowledge` cannot say that the knowledge base does not cover a question. Write tools are designed, not built. Details and numbers: [`case-study.md`](case-study.md), [`eval-results.md`](eval-results.md), [`supabase-edge.md`](supabase-edge.md).
+The harder suite has been run with one model, three times per task. Claude Desktop and Cursor have not been tried. `search_knowledge` cannot say that the knowledge base does not cover a question. Write tools are designed, not built. Details and numbers: [`case-study.md`](case-study.md), [`eval-results.md`](eval-results.md), [`supabase-edge.md`](supabase-edge.md).

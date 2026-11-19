@@ -145,7 +145,7 @@ Each protection was verified by removing it and checking that the check guarding
 - A `list_knowledge` tool (titles, status and chunk counts, no full text), so an agent can check what the knowledge base holds.
 - Write tools, designed but not built: separate token scopes per area (knowledge base, system prompt, store tools, reply templates), each following the role the admin panel already requires; deletes need the exact id repeated; every change is audited with its before and after values; secrets can be set but never read back. Replying and taking over a conversation come after.
 - A Supabase Edge Function deployment of the TypeScript server: built and tested (the bundle passes the hosted conformance tests, 24 of 24, in a Deno process), deployed once to a Supabase project by the maintainer and answering there; see [`docs/supabase-edge.md`](docs/supabase-edge.md). A small demo and documentation site after that.
-- Task-level evals: first result in [`docs/eval-results.md`](docs/eval-results.md) (two models, 11 easy tasks: equal success, protected data shown in 12/33 and 11/31 raw-REST runs and 0 with the server); harder tasks and weaker models next.
+- Task-level evals: results in [`docs/eval-results.md`](docs/eval-results.md). Easy tasks, two models: equal success, protected data shown in 12/33 and 11/31 raw-REST runs and 0 with the server. Hard suite, one model: server 33/33 against raw REST 30/33, and no planted instruction obeyed in either condition. More runs per task, a weaker model (which might obey), and the Opus run of the hard suite are next.
 
 ## License
 
