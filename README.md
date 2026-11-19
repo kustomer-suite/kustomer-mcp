@@ -77,6 +77,20 @@ If the file already has `mcpServers`, add only the `"kustomer": { ... }` entry i
 
 Put the same JSON as above in `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project), then reload Cursor. Do not commit a file that holds a token.
 
+### claude.ai on the web (custom connector, tried by the maintainer)
+
+claude.ai cannot send a header, so the hosted server also answers at `/connect`, where the token goes in the URL:
+
+1. Open claude.ai, then Customize, then Connectors, then **Add custom connector**.
+2. Name: `Kustomer`. URL, exactly, with no space, no quotes and nothing after the token:
+
+   ```
+   https://mcp.kustomersuite.com/connect?token=ksm_YOUR_TOKEN
+   ```
+3. Leave the OAuth Client ID and Client Secret fields empty. Add it, and enable it in a chat.
+
+A token in a URL is easier to leak than one in a header. The server side keeps it out of its own logs (the web server swaps it for an `Authorization` header and drops the query string before the application sees it, and its access log never records query strings), but Cloudflare and claude.ai keep the full URL. So use a **token made only for claude.ai** (read-only, one store), and have it revoked if the URL ever leaks. OAuth sign-in for claude.ai is planned and would remove this step.
+
 ### Try it
 
 Ask the agent, in plain words:
@@ -96,6 +110,7 @@ It should call `list_conversations`, `get_conversation`, `get_usage` and `get_to
 | `... is not a Kustomer Suite MCP token (they start with ksm_)` | Wrong string: a login token or another service's key. Use the `ksm_...` token. |
 | `401`, "invalid" or "revoked" | The token expired (they last 90 days by default) or was revoked. Ask the maintainer for a new one. |
 | `429` | Rate limit: 60 calls a minute, and 10 knowledge-base searches a minute per token. Wait a minute. |
+| claude.ai says "Couldn't register with ... sign-in service" | The server answered 401 to the first request, so claude.ai fell back to looking for OAuth (which this server does not offer), and that is the message you see. Check the URL has no space or quote after `token=`, and that the token is valid and not expired. Delete the connector and add it again. |
 | `Pending approval` in `claude mcp list` | The server was added with `--scope project`. Remove it and add it again without `--scope`. |
 | `Invalid environment variable format` | In `claude mcp add`, the server name must come before `-e`. |
 | Slow or silent first start with `npx` | It is downloading the package. Wait, or run `npx -y kustomersuite-mcp` once by hand (it prints the missing-token message and exits, which is fine). |
