@@ -9,9 +9,14 @@ The TypeScript server, the same five tools and the same contract (`spec/tools.js
 
 ## What is not verified
 
-- It has not been deployed to Supabase yet. Deno 2.1.10 in Docker is the same runtime family as Supabase's, not the Supabase runtime itself; cold start, memory and the platform's limits are untested.
+- The conformance tests have not been run against the deployed function: they need the `basic` fixture and the deployed one serves `hard`. The 24 of 24 above is the same bundle in a local Deno process.
+- Cold start and memory under load are not measured. Unauthenticated requests to the deployed function took about 0.1 seconds warm (first call 0.22 seconds, including the TLS handshake); that says nothing about a call that runs a tool.
 - There is no rate limit of its own beyond the platform's.
-- Claude Desktop, Cursor and claude.ai have not been pointed at a deployed URL.
+- Claude Desktop, Cursor and claude.ai have not been pointed at the deployed URL.
+
+## Verified on Supabase (2026-11-19)
+
+The maintainer deployed it to a Supabase project. From outside: `tools/list` with the demo token returned the five tools with the current contract text; a request without a token or with a wrong one got 401; `OPTIONS` got 204; the response headers (`x-deno-execution-id`, `sb-project-ref`, `x-sb-edge-region`) show it ran on Supabase's edge.
 
 ## Deploy
 

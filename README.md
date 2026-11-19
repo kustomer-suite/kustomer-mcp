@@ -12,7 +12,7 @@ An [MCP](https://modelcontextprotocol.io) server for [Kustomer Suite](https://ku
 |---|---|
 | `list_conversations` | Conversations, newest activity first. `handover_status=pending` finds customers waiting for a human. |
 | `get_conversation` | One thread. Bot replies carry `response_source`, the knowledge-base titles used and the bot's confidence score. |
-| `search_knowledge` | The search the bot runs before answering, with similarity scores. Shows which passages the bot could have used. **Known limits:** some queries return nothing or fewer results than asked for, and it cannot say that the knowledge base does not cover a question: see [what the first real use found](docs/case-study.md#after-it-went-live-what-real-use-found). |
+| `search_knowledge` | The search the bot runs before answering, with similarity scores. Shows which passages the bot could have used. **Known limit:** it cannot say that the knowledge base does not cover a question, because it always returns its nearest passages (an earlier defect that made some queries return nothing was fixed on 2026-11-19): see [what the first real use found](docs/case-study.md#after-it-went-live-what-real-use-found). |
 | `get_tool_calls` | The bot's calls to the store's own tools (availability, order status, checkout): arguments, outcome, whether the server corrected an argument. |
 | `get_usage` | Quota usage per channel and AI tokens for the current period. |
 
@@ -144,8 +144,7 @@ Each protection was verified by removing it and checking that the check guarding
 - A dashboard screen to create, scope and revoke tokens; OAuth for remote MCP clients.
 - A `list_knowledge` tool (titles, status and chunk counts, no full text), so an agent can check what the knowledge base holds.
 - Write tools, designed but not built: separate token scopes per area (knowledge base, system prompt, store tools, reply templates), each following the role the admin panel already requires; deletes need the exact id repeated; every change is audited with its before and after values; secrets can be set but never read back. Replying and taking over a conversation come after.
-- Fixing the `search_knowledge` recall defect described in the case study (a migration is written and tested against a copy; it is not deployed).
-- A Supabase Edge Function deployment of the TypeScript server: built and tested (the bundle passes the hosted conformance tests, 24 of 24, in a Deno process), not yet deployed; see [`docs/supabase-edge.md`](docs/supabase-edge.md). A small demo and documentation site after that.
+- A Supabase Edge Function deployment of the TypeScript server: built and tested (the bundle passes the hosted conformance tests, 24 of 24, in a Deno process), deployed once to a Supabase project by the maintainer and answering there; see [`docs/supabase-edge.md`](docs/supabase-edge.md). A small demo and documentation site after that.
 - Task-level evals: first result in [`docs/eval-results.md`](docs/eval-results.md) (two models, 11 easy tasks: equal success, protected data shown in 12/33 and 11/31 raw-REST runs and 0 with the server); harder tasks and weaker models next.
 
 ## License
