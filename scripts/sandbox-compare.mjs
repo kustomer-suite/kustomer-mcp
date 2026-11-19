@@ -25,7 +25,10 @@ await prod.connect(new StreamableHTTPClientTransport(new URL("https://mcp.kustom
 const rules = JSON.parse(readFileSync("spec/tools.json", "utf8")).redaction.rules.map((r) => [new RegExp(r.pattern, "g"), r.replacement]);
 const urlRx = /https?:\/\/[^\s)\]"'<>]+/g;
 const names = (process.env.SANDBOX_MASK ?? "").split(",").map((n) => n.trim()).filter(Boolean).map((n) => new RegExp(`(?<![A-Za-z0-9])${n}(?![A-Za-z0-9])`, "gi"));
-const scrubText = (t) => { for (const [rx, rep] of rules) t = t.replace(rx, rep); t = t.replace(urlRx, "[link]"); for (const rx of names) t = t.replace(rx, "Budi"); return t; };
+const keepHosts = (process.env.SANDBOX_KEEP_HOSTS ?? "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+const hostOf = (u) => (u.replace(/^https?:\/\//, "").toLowerCase().match(/^[a-z0-9.-]+/)?.[0] ?? "").replace(/\.+$/, "");
+const keepUrl = (u) => keepHosts.some((h) => hostOf(u) === h || hostOf(u).endsWith("." + h));
+const scrubText = (t) => { for (const [rx, rep] of rules) t = t.replace(rx, rep); t = t.replace(urlRx, (u) => (keepUrl(u) ? u : "[link]")); for (const rx of names) t = t.replace(rx, "Budi"); return t; };
 // apply to the text of every UntrustedText of what prod answered (the clone was scrubbed the same way)
 const scrubTree = (v) => Array.isArray(v) ? v.map(scrubTree) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === "text" && typeof x === "string" ? scrubText(x) : scrubTree(x)])) : v;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

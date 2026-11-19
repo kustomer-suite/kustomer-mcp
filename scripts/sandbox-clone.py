@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--db", default="kustomer")
     ap.add_argument("--store-id", required=True)
     ap.add_argument("--mask", default="", help="comma-separated names to replace (whole words, case-insensitive) in the text; list the longest first")
+    ap.add_argument("--keep-hosts", default="", help="comma-separated hosts whose links are kept (for example the staging endpoint of the store's own tools); every other link is replaced")
     ap.add_argument("--embedding-model", default="text-embedding-ada-002", help="the model the stored vectors were made with")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -73,7 +74,10 @@ def main():
     nrx = [re.compile(r"(?<![A-Za-z0-9])" + re.escape(n) + r"(?![A-Za-z0-9])", re.I) for n in names]  # whole words: "Andi" must not hit "kandidat"
     # Links in the text point at systems that are not part of this repository (a partner's staging host, a payment page).
     url_rx = re.compile(r"https?://[^\s)\]\"'<>]+")
-    counts = {r[2]: 0 for r in rx} | {"mask": 0, "url": 0}
+    keep_hosts = [h.strip().lower() for h in a.keep_hosts.split(",") if h.strip()]
+    host_of = lambda u: (re.match(r"[a-z0-9.-]+", re.sub(r"^https?://", "", u).lower()) or re.match(r"", "")).group(0).rstrip(".")  # the host only: not a trailing "**" or "." of the sentence
+    kept = lambda u: any(host_of(u) == h or host_of(u).endswith("." + h) for h in keep_hosts)
+    counts = {r[2]: 0 for r in rx} | {"mask": 0, "url": 0, "url_kept": 0}
 
     def scrub(s):
         if not isinstance(s, str):
@@ -81,8 +85,13 @@ def main():
         for pat, rep, name in rx:
             s, n = pat.subn(rep, s)
             counts[name] += n
-        s, n = url_rx.subn("[link]", s)
-        counts["url"] += n
+        def link(m):
+            if kept(m.group(0)):
+                counts["url_kept"] += 1
+                return m.group(0)
+            counts["url"] += 1
+            return "[link]"
+        s = url_rx.sub(link, s)
         for pat in nrx:
             s, n = pat.subn(REPLACEMENT_NAME, s)
             counts["mask"] += n
@@ -163,8 +172,9 @@ def main():
     for pat in nrx:
         if pat.search(text_blob):
             sys.exit("scrub failed: a masked name remains")
-    if url_rx.search(text_blob):
-        sys.exit("scrub failed: a link remains")
+    if any(not kept(u) for u in url_rx.findall(text_blob)):
+        bad = sorted({host_of(u) for u in url_rx.findall(text_blob) if not kept(u)})
+        sys.exit(f"scrub failed: a link that is not on --keep-hosts remains (hosts: {', '.join(bad)})")
     # And nothing that must not be there at all, anywhere in what will be written.
     blob = json.dumps([[c["body"] for c in convs], [m["body"] for m in msgs], [l["body"] for l in logs]], ensure_ascii=False)
     for banned in ("request_headers", "request_body", "response_body", "endpoint_url", "ip_address", "contact_id", "external_id"):
