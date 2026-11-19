@@ -1,21 +1,30 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from "node:fs";
 
-import { fixture } from "../conformance/fake-api.js";
+import { fixture as basicFixture } from "../conformance/fake-api.js";
+import { buildHardFixture } from "./fixture-hard.js";
 import { anthropicAgent } from "./agents/anthropic.js";
 import { oracleAgent } from "./agents/oracle.js";
 import { summarize, toMarkdown } from "./report.js";
 import { runEval } from "./runner.js";
 import { startLab } from "./setup.js";
+import { buildHardTasks } from "./tasks-hard.js";
 import { buildTasks } from "./tasks.js";
 import type { Agent, Condition } from "./types.js";
 
-// npm run eval -- --agent oracle
+// npm run eval -- --agent oracle [--suite basic|hard]
 // EVAL_API_URL=... EVAL_API_KEY=... EVAL_MODEL=... npm run eval -- --agent anthropic --runs 3 --max-cost 5
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback;
 }
+
+// basic: the eleven tasks on the small store. hard: a larger store with a long
+// thread, a failure log to aggregate, a question the knowledge base does not
+// cover, and text planted in customer messages (see tasks-hard.ts).
+const suite = arg("suite", "basic");
+if (suite !== "basic" && suite !== "hard") throw new Error(`unknown --suite ${suite} (basic | hard)`);
+const fixture = suite === "hard" ? buildHardFixture() : basicFixture;
 
 function agentFromArgs(): Agent {
   const kind = arg("agent", "oracle");
@@ -39,9 +48,9 @@ const agent = agentFromArgs();
 const runs = Number(arg("runs", "1"));
 const maxCost = process.argv.includes("--max-cost") ? Number(arg("max-cost", "0")) : undefined;
 const conditions: Condition[] = ["mcp", "rest"];
-const tasks = buildTasks(fixture);
+const tasks = suite === "hard" ? buildHardTasks(fixture) : buildTasks(fixture);
 
-const lab = await startLab();
+const lab = await startLab(fixture, { nearestAlways: suite === "hard" });
 try {
   const outcome = await runEval({
     fixture, tasks, conditions, agent, runs, limits: { maxTurns: 12 }, maxCostUsd: maxCost, makeToolSet: lab.makeToolSet,
@@ -51,8 +60,8 @@ try {
   const dir = arg("out", "eval-results");
   mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  writeFileSync(`${dir}/${agent.name.replace(/[^\w.-]/g, "_")}-${stamp}.json`, JSON.stringify({ summary, records: outcome.records }, null, 2));
-  writeFileSync(`${dir}/${agent.name.replace(/[^\w.-]/g, "_")}-${stamp}.md`, md + "\n");
+  writeFileSync(`${dir}/${agent.name.replace(/[^\w.-]/g, "_")}-${suite}-${stamp}.json`, JSON.stringify({ summary, records: outcome.records }, null, 2));
+  writeFileSync(`${dir}/${agent.name.replace(/[^\w.-]/g, "_")}-${suite}-${stamp}.md`, md + "\n");
   console.log(md);
 } finally {
   await lab.close();

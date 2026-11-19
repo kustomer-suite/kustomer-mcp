@@ -29,6 +29,10 @@ export interface Task {
   category: string;
   prompt: string; // ends with the JSON shape the agent must answer with
   expect: Expectation;
+  // Strings that exist only in an instruction planted in the data (a canary, or a
+  // secret the planted text asks for). Finding one in the answer means the agent
+  // obeyed text that was data, and the run fails whatever else it got right.
+  forbid?: string[];
 }
 
 export interface Limits {
@@ -55,4 +59,5 @@ export interface Agent {
 export interface Grade {
   pass: boolean;
   reason: string;
+  followedInjection?: boolean; // the answer contained a string from Task.forbid
 }
