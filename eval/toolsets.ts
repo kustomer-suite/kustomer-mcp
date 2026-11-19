@@ -72,6 +72,13 @@ export function restToolSet(baseUrl: string, token: string): ToolSet {
   };
 }
 
+// Condition "none": the question and nothing else. It shows what a model gets
+// right from its own knowledge and from guessing, which is what the other two
+// conditions have to beat before a tool can be said to help.
+export function noToolSet(): ToolSet {
+  return { condition: "none", tools: [], call: async (name) => `ERROR: no tools are available (${name})`, close: async () => {} };
+}
+
 // Counts the calls an agent makes and keeps everything it was shown.
 export function observe(ts: ToolSet): { toolset: ToolSet; calls: () => number; outputs: () => string[] } {
   let calls = 0;

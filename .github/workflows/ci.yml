@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # Includes the conformance suite against the local fake API and the evaluation's own tests.
+      - run: npm test
+      - run: npm run build
+      # The quality gate: the oracle agent on both suites. No model, no secrets, no cost.
+      # It fails when a task can no longer be solved through the server, when the server
+      # shows protected data, or when the controls that give those checks meaning stop working.
+      - run: node dist/eval/cli.js --gate

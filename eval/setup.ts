@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 import { fixture as basicFixture, startFakeApi, type FakeApi, type FakeApiOptions, type Fixture } from "../conformance/fake-api.js";
 import { createServer } from "../src/server.js";
-import { mcpToolSet, restToolSet } from "./toolsets.js";
+import { mcpToolSet, noToolSet, restToolSet } from "./toolsets.js";
 import type { Condition, ToolSet } from "./types.js";
 
 // The local lab: the synthetic "Sandbox Hotel" store served by a fake REST API.
@@ -20,6 +20,7 @@ export async function startLab(fixture: Fixture = basicFixture, opts: FakeApiOpt
   return {
     api,
     async makeToolSet(condition) {
+      if (condition === "none") return noToolSet();
       if (condition === "rest") return restToolSet(api.url, fixture.token);
       const server = createServer({ baseUrl: api.url, token: fixture.token, storeId: fixture.store.id });
       const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();

@@ -19,6 +19,16 @@ export interface ConditionSummary {
   byCategory: Record<string, { passed: number; runs: number }>;
 }
 
+// 95% Wilson score interval for a pass rate: honest about how little 33 runs say.
+export function wilson(passed: number, n: number, z = 1.96): [number, number] {
+  if (n === 0) return [0, 0];
+  const p = passed / n;
+  const d = 1 + (z * z) / n;
+  const c = (p + (z * z) / (2 * n)) / d;
+  const h = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
+  return [Math.max(0, c - h), Math.min(1, c + h)];
+}
+
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
 export function summarize(records: RunRecord[]): ConditionSummary[] {
@@ -55,6 +65,7 @@ export function summarize(records: RunRecord[]): ConditionSummary[] {
 
 export function toMarkdown(s: ConditionSummary[], meta: { agent: string; tasks: number; runs: number; budgetStopped: boolean }): string {
   const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
+  const ci = (c: ConditionSummary) => wilson(c.passed, c.runs).map(pct).join("–");
   const cost = (c: number | null) => (c === null ? "n/a (no prices given)" : `$${c.toFixed(4)}`);
   const categories = [...new Set(s.flatMap((c) => Object.keys(c.byCategory)))];
   return [
@@ -70,7 +81,7 @@ export function toMarkdown(s: ConditionSummary[], meta: { agent: string; tasks: 
     "|---|---|---|---|---|---|---|",
     ...s.map(
       (c) =>
-        `| ${c.condition} | ${c.passed}/${c.runs} (${pct(c.passRate)}) | ${c.meanToolCalls.toFixed(1)} | ${c.meanTokens.toFixed(0)} | ${cost(c.totalCostUsd)} | ${c.meanMs.toFixed(0)} | ${c.exposedRuns}/${c.runs} |`,
+        `| ${c.condition} | ${c.passed}/${c.runs} (${pct(c.passRate)}, 95% CI ${ci(c)}) | ${c.meanToolCalls.toFixed(1)} | ${c.meanTokens.toFixed(0)} | ${cost(c.totalCostUsd)} | ${c.meanMs.toFixed(0)} | ${c.exposedRuns}/${c.runs} |`,
     ),
     "",
     `| Category | ${s.map((c) => c.condition).join(" | ")} |`,
