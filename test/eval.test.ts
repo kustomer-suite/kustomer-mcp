@@ -166,6 +166,19 @@ describe("runner and report", () => {
     expect(records[0]!.reason).toContain("gateway down");
   });
 
+  it("does not score a run the endpoint failed, for or against its condition", () => {
+    const base = { task: "t", category: "c", run: 1, toolCalls: 0, inputTokens: 1, outputTokens: 1, costUsd: null, ms: 1, model: null, exposure: {} as never };
+    const recs = [
+      { ...base, condition: "mcp", pass: true, reason: "", stoppedBy: "done" },
+      { ...base, condition: "mcp", pass: false, reason: "agent error: HTTP 503", stoppedBy: "error" },
+      { ...base, condition: "rest", pass: false, reason: "wrong", stoppedBy: "done" },
+    ] as never;
+    const s = summarize(recs);
+    expect(s[0]).toMatchObject({ condition: "mcp", runs: 1, passed: 1, errored: 1 });
+    expect(s[1]).toMatchObject({ condition: "rest", runs: 1, passed: 0, errored: 0 });
+    expect(toMarkdown(s, { agent: "a", tasks: 1, runs: 1, budgetStopped: false })).toContain("Not scored");
+  });
+
   it("never turns an unknown cost into a total", async () => {
     const unpriced: Agent = { name: "u", run: async () => ({ answer: "{}", toolCalls: 0, inputTokens: 1, outputTokens: 1, costUsd: null, ms: 1, stoppedBy: "done" }) };
     const { records } = await runEval({ fixture, tasks: tasks.slice(0, 2), conditions: ["mcp"], agent: unpriced, runs: 1, limits, makeToolSet: async () => bare });
@@ -270,10 +283,31 @@ describe("the model agent, against a stand-in Messages API", () => {
 
   it("reports an HTTP failure without echoing the response body", async () => {
     replies = [{ status: 500, json: { error: "SECRET-KEY-ECHO" } }];
-    const r = await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m" }).run(task, tool(), limits);
+    const r = await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m", retryDelayMs: 0 }).run(task, tool(), limits);
     expect(r.stoppedBy).toBe("error");
     expect(r.error).toContain("500");
     expect(JSON.stringify(r)).not.toContain("SECRET-KEY-ECHO");
+  });
+
+  it("retries a transient 503 and then answers; the retried failure is not charged to the model", async () => {
+    const ok = { json: { model: "claude-x", content: [{ type: "text", text: '{"a":1}' }], stop_reason: "end_turn", usage: { input_tokens: 5, output_tokens: 2 } } };
+    replies = [{ status: 503 }, { status: 429 }, ok];
+    seen = [];
+    const r = await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m", retryDelayMs: 0 }).run(task, tool(), limits);
+    expect(r.stoppedBy).toBe("done");
+    expect(seen).toHaveLength(3);
+  });
+
+  it("does not retry a 4xx (a bad key stays a bad key) and gives up after the retries on a persistent 503", async () => {
+    replies = [{ status: 401 }];
+    seen = [];
+    expect((await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m", retryDelayMs: 0 }).run(task, tool(), limits)).error).toContain("401");
+    expect(seen).toHaveLength(1);
+    replies = [{ status: 503 }, { status: 503 }, { status: 503 }, { status: 503 }, { status: 503 }];
+    seen = [];
+    const r = await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m", retryDelayMs: 0 }).run(task, tool(), limits);
+    expect(r.error).toContain("503");
+    expect(seen).toHaveLength(4); // 1 + 3 retries
   });
 
   it("gives up after maxTurns and says so", async () => {

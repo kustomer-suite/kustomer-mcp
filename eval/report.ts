@@ -4,7 +4,8 @@ import type { Condition } from "./types.js";
 
 export interface ConditionSummary {
   condition: Condition;
-  runs: number;
+  runs: number; // scored runs: the endpoint answered
+  errored: number; // runs lost to an endpoint error (outage, 5xx after retries): kept in the raw records, never scored for or against a condition
   passed: number;
   passRate: number;
   meanToolCalls: number;
@@ -21,7 +22,8 @@ const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.l
 export function summarize(records: RunRecord[]): ConditionSummary[] {
   const conditions = [...new Set(records.map((r) => r.condition))];
   return conditions.map((condition) => {
-    const rs = records.filter((r) => r.condition === condition);
+    const all = records.filter((r) => r.condition === condition);
+    const rs = all.filter((r) => r.stoppedBy !== "error");
     const byCategory: ConditionSummary["byCategory"] = {};
     for (const r of rs) {
       const c = (byCategory[r.category] ??= { passed: 0, runs: 0 });
@@ -33,6 +35,7 @@ export function summarize(records: RunRecord[]): ConditionSummary[] {
     return {
       condition,
       runs: rs.length,
+      errored: all.length - rs.length,
       passed,
       passRate: rs.length ? passed / rs.length : 0,
       meanToolCalls: mean(rs.map((r) => r.toolCalls)),
@@ -55,6 +58,7 @@ export function toMarkdown(s: ConditionSummary[], meta: { agent: string; tasks: 
     "",
     `Model(s) reported by the endpoint: ${[...new Set(s.flatMap((c) => c.models))].join(", ")}`,
     "",
+    ...(s.some((c) => c.errored) ? [`Not scored (the endpoint failed, so the model never answered): ${s.map((c) => `${c.condition} ${c.errored}`).join(", ")}. They stay in the raw records.`, ""] : []),
     "| Condition | Passed | Mean tool calls | Mean tokens | Cost | Mean ms | Runs where the agent was shown protected data |",
     "|---|---|---|---|---|---|---|",
     ...s.map(
