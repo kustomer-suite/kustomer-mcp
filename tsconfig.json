@@ -17,6 +17,7 @@
     "edge",
     "conformance",
     "test",
-    "eval"
+    "eval",
+    "scripts"
   ]
 }

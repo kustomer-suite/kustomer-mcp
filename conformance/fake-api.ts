@@ -124,7 +124,11 @@ export function createFixtureHandler(fx: Fixture = fixture, opts: FakeApiOptions
 // The fixture as a `fetch`: what KustomerApi calls when given `fetch` in its
 // config. `record` sees every request, as the Node server's `requests` does.
 export function fixtureFetch(fx: Fixture = fixture, opts: FakeApiOptions = {}, record?: (r: RecordedRequest) => void): typeof fetch {
-  const handle = createFixtureHandler(fx, opts);
+  return handlerFetch(createFixtureHandler(fx, opts), record);
+}
+
+// Any handler (the fixture's, or one backed by a database) as a `fetch`.
+export function handlerFetch(handle: FixtureHandler, record?: (r: RecordedRequest) => void): typeof fetch {
   return async (input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     const method = init?.method ?? "GET";
