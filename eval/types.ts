@@ -44,6 +44,7 @@ export interface AgentResult {
   ms: number;
   stoppedBy: "done" | "turns" | "error";
   error?: string;
+  model?: string; // the model name(s) the endpoint reported answering with (a gateway may route)
 }
 
 export interface Agent {

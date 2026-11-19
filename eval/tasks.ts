@@ -10,6 +10,8 @@ export function buildTasks(fx: Fixture): Task[] {
   const other = fx.conversations.find((c) => c.store_id === fx.otherStore.id)!;
   const pending = own.filter((c) => c.handover_status === "pending").map((c) => c.id);
   const unread = own.filter((c) => c.status === "unread").map((c) => c.id);
+  const failed = fx.toolLogs.find((l) => l.store_id === fx.store.id && l.conversation_id === c1.id && l.error_type && l.error_type !== "success");
+  if (!failed) throw new Error("fixture needs a failed tool call in the first conversation");
   const q = fx.quota;
   const store = `Your store id is ${fx.store.id}.`;
   const json = (shape: string) => ` Finish with one JSON object ${shape} and nothing after it.`;
@@ -29,8 +31,8 @@ export function buildTasks(fx: Fixture): Task[] {
       prompt: `${store} What confidence score did the bot's reply carry in conversation ${c2.id}?${json('{"confidence": <number>}')}` },
     { id: "kb-coverage", category: "knowledge", expect: { kind: "mentions", field: "answer", all: ["14.00"] },
       prompt: `${store} Does the store's knowledge base say what time check-in starts? If so, at what time?${json('{"answer": "<the time as written in the knowledge base>"}')}` },
-    { id: "failed-tool-calls", category: "diagnosis", expect: { kind: "fields", fields: { tool: "get_room_types", outcome: "http_error" } },
-      prompt: `${store} Which tool call failed in conversation ${c1.id}, and what was its outcome?${json('{"tool": "<tool name>", "outcome": "<outcome>"}')}` },
+    { id: "failed-tool-calls", category: "diagnosis", expect: { kind: "fields", fields: { tool: failed.tool_name, http_status: failed.response_status } },
+      prompt: `${store} Which tool call failed in conversation ${c1.id}, and what HTTP status code did the failed call get?${json('{"tool": "<tool name>", "http_status": <number>}')}` },
     { id: "whatsapp-usage", category: "usage", expect: { kind: "fields", fields: { used: q.whatsapp_conversations_used, limit: q.whatsapp_conversations_limit } },
       prompt: `${store} For the current billing period, how many WhatsApp conversations has the store used, and what is its limit?${json('{"used": <number>, "limit": <number>}')}` },
     { id: "ai-tokens-billed", category: "usage", expect: { kind: "fields", fields: { billed: q.ai_tokens_billed } },

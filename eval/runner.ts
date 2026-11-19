@@ -17,6 +17,7 @@ export interface RunRecord {
   costUsd: number | null;
   ms: number;
   stoppedBy: string;
+  model: string | null;
   exposure: Exposure;
 }
 
@@ -40,16 +41,19 @@ export async function runEval(o: RunOptions): Promise<RunOutcome> {
   const records: RunRecord[] = [];
   let spent = 0;
   let budgetStopped = false;
-  for (const condition of o.conditions) {
-    const ts = await o.makeToolSet(condition);
-    try {
-      for (let run = 1; run <= o.runs && !budgetStopped; run++) {
-        for (const task of o.tasks) {
+  // Conditions are interleaved task by task (not one condition after the other),
+  // so gateway warm-up and drift in latency fall on both conditions alike.
+  const sets = new Map<Condition, ToolSet>();
+  try {
+    for (const condition of o.conditions) sets.set(condition, await o.makeToolSet(condition));
+    for (let run = 1; run <= o.runs && !budgetStopped; run++) {
+      for (const task of o.tasks) {
+        for (const condition of o.conditions) {
           if (o.maxCostUsd !== undefined && spent >= o.maxCostUsd) {
             budgetStopped = true;
             break;
           }
-          const obs = observe(ts);
+          const obs = observe(sets.get(condition)!);
           let result: AgentResult;
           try {
             result = await o.agent.run(task, obs.toolset, o.limits);
@@ -61,13 +65,14 @@ export async function runEval(o: RunOptions): Promise<RunOutcome> {
           records.push({
             condition, task: task.id, category: task.category, run, pass: g.pass, reason: g.reason,
             toolCalls: obs.calls(), inputTokens: result.inputTokens, outputTokens: result.outputTokens,
-            costUsd: result.costUsd, ms: result.ms, stoppedBy: result.stoppedBy, exposure: exposure(obs.outputs(), o.fixture),
+            costUsd: result.costUsd, ms: result.ms, stoppedBy: result.stoppedBy, model: result.model ?? null, exposure: exposure(obs.outputs(), o.fixture),
           });
         }
+        if (budgetStopped) break;
       }
-    } finally {
-      await ts.close();
     }
+  } finally {
+    for (const ts of sets.values()) await ts.close();
   }
   return { records, budgetStopped };
 }

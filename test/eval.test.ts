@@ -82,6 +82,25 @@ describe("the lab: oracle and control agents", () => {
     expect(records).toHaveLength(tasks.length * 2);
   });
 
+  it("interleaves the conditions task by task, so latency drift falls on both", async () => {
+    const { records } = await run(oracleAgent(fixture.store.id));
+    expect(records.slice(0, 4).map((r) => `${r.condition}/${r.task}`)).toEqual([
+      `mcp/${tasks[0]!.id}`, `rest/${tasks[0]!.id}`, `mcp/${tasks[1]!.id}`, `rest/${tasks[1]!.id}`,
+    ]);
+  });
+
+  // The task must not ask in one condition's own vocabulary: a correct answer in the
+  // other condition's words was once refused ("HTTP 500: upstream returned 500" for "http_error").
+  it("failed-tool-calls asks for the HTTP status, which both conditions expose", async () => {
+    const t = tasks.find((x) => x.id === "failed-tool-calls")!;
+    expect(t.prompt).toContain("http_status");
+    expect(t.prompt).not.toContain("outcome");
+    const status = fixture.toolLogs.find((l) => l.error_type && l.error_type !== "success")!.response_status;
+    expect(t.expect).toEqual({ kind: "fields", fields: { tool: "get_room_types", http_status: status } });
+    expect(grade(t, JSON.stringify({ tool: "get_room_types", http_status: status })).pass).toBe(true);
+    expect(grade(t, JSON.stringify({ tool: "get_room_types", http_status: 200 })).pass).toBe(false);
+  });
+
   // Control: the graders are not vacuous.
   it("an agent that always answers wrongly passes nothing", async () => {
     const { records } = await run(wrongAgent);
@@ -234,6 +253,7 @@ describe("the model agent, against a stand-in Messages API", () => {
     expect(priced.costUsd).toBeCloseTo((250 * 3 + 30 * 15) / 1e6, 10);
     expect(ts.calls).toEqual([{ name: "get_usage", args: {} }]);
     expect(seen[0]!.headers["x-api-key"]).toBe("k-secret");
+    expect(seen[0]!.body.stream).toBe(false);
     expect(seen[0]!.body.tools).toEqual([{ name: "get_usage", description: "usage", input_schema: { type: "object" } }]);
     expect(seen[1]!.body.messages.at(-1).content[0]).toMatchObject({ type: "tool_result", tool_use_id: "tu1", content: '{"ok":true}', is_error: false });
 
@@ -241,6 +261,11 @@ describe("the model agent, against a stand-in Messages API", () => {
     replies = [{ json: { stop_reason: "end_turn", content: [{ type: "text", text: "{}" }], usage: { input_tokens: 1, output_tokens: 1 } } }];
     const unpriced = await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m" }).run(task, tool(), limits);
     expect(unpriced.costUsd).toBeNull();
+    expect(unpriced.model).toBeUndefined();
+
+    seen = [];
+    replies = [{ json: { model: "claude-x", stop_reason: "end_turn", content: [{ type: "text", text: "{}" }], usage: { input_tokens: 1, output_tokens: 1 } } }];
+    expect((await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m" }).run(task, tool(), limits)).model).toBe("claude-x");
   });
 
   it("reports an HTTP failure without echoing the response body", async () => {

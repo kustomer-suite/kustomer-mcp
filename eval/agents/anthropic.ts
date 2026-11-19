@@ -32,11 +32,12 @@ export function anthropicAgent(cfg: AnthropicConfig): Agent {
       const start = Date.now();
       let inputTokens = 0;
       let outputTokens = 0;
+      const models = new Set<string>();
       const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [{ role: "user", content: task.prompt }];
       const done = (answer: string, stoppedBy: AgentResult["stoppedBy"], error?: string): AgentResult => {
         const priced = cfg.priceInPerMTok !== undefined && cfg.priceOutPerMTok !== undefined;
         return {
-          answer, toolCalls: 0, inputTokens, outputTokens, stoppedBy, error, ms: Date.now() - start,
+          answer, toolCalls: 0, inputTokens, outputTokens, stoppedBy, error, ms: Date.now() - start, model: [...models].sort().join(",") || undefined,
           costUsd: priced ? (inputTokens * cfg.priceInPerMTok! + outputTokens * cfg.priceOutPerMTok!) / 1e6 : null,
         };
       };
@@ -50,6 +51,7 @@ export function anthropicAgent(cfg: AnthropicConfig): Agent {
             body: JSON.stringify({
               model: cfg.model,
               max_tokens: cfg.maxTokens ?? 1024,
+              stream: false, // some gateways answer with an SSE stream unless told not to
               system: SYSTEM,
               tools: tools.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
               messages,
@@ -59,7 +61,8 @@ export function anthropicAgent(cfg: AnthropicConfig): Agent {
           return done("", "error", `request failed: ${(e as Error).message}`);
         }
         if (!res.ok) return done("", "error", `the endpoint answered HTTP ${res.status}`); // the body is not echoed: it may repeat credentials
-        const body = (await res.json()) as { content?: Block[]; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };
+        const body = (await res.json()) as { model?: string; content?: Block[]; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } };
+        if (body.model) models.add(body.model);
         inputTokens += body.usage?.input_tokens ?? 0;
         outputTokens += body.usage?.output_tokens ?? 0;
         const blocks = body.content ?? [];

@@ -46,7 +46,7 @@ async function solve(task: Task, p: Probe, storeId: string): Promise<Record<stri
       return { answer: (await p.search("check-in")).join(" ").match(/\b\d{1,2}\.\d{2}\b/)?.[0] };
     case "failed-tool-calls": {
       const f = (await p.failedToolCalls(conv))[0];
-      return { tool: f?.tool, outcome: f?.outcome };
+      return { tool: f?.tool, http_status: f?.status };
     }
     case "whatsapp-usage": {
       const u = await p.usage();

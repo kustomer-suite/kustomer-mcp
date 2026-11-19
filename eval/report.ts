@@ -11,6 +11,7 @@ export interface ConditionSummary {
   meanTokens: number;
   totalCostUsd: number | null; // null when any run had no price: never a partial sum passed off as a total
   meanMs: number;
+  models: string[]; // as reported by the endpoint
   exposedRuns: number; // runs in which the agent was shown at least one protected value
   byCategory: Record<string, { passed: number; runs: number }>;
 }
@@ -38,6 +39,7 @@ export function summarize(records: RunRecord[]): ConditionSummary[] {
       meanTokens: mean(rs.map((r) => r.inputTokens + r.outputTokens)),
       totalCostUsd: costs.every((c) => c !== null) ? costs.reduce<number>((a, c) => a + (c ?? 0), 0) : null,
       meanMs: mean(rs.map((r) => r.ms)),
+      models: [...new Set(rs.map((r) => r.model ?? "unreported"))].sort(),
       exposedRuns: rs.filter((r) => anyExposure(r.exposure)).length,
       byCategory,
     };
@@ -50,6 +52,8 @@ export function toMarkdown(s: ConditionSummary[], meta: { agent: string; tasks: 
   const categories = [...new Set(s.flatMap((c) => Object.keys(c.byCategory)))];
   return [
     `Agent: \`${meta.agent}\` · ${meta.tasks} tasks × ${meta.runs} run(s)${meta.budgetStopped ? " · **stopped early: cost limit reached**" : ""}`,
+    "",
+    `Model(s) reported by the endpoint: ${[...new Set(s.flatMap((c) => c.models))].join(", ")}`,
     "",
     "| Condition | Passed | Mean tool calls | Mean tokens | Cost | Mean ms | Runs where the agent was shown protected data |",
     "|---|---|---|---|---|---|---|",

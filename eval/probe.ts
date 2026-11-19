@@ -13,7 +13,7 @@ export interface Probe {
   pending(): Promise<string[]>;
   unread(): Promise<string[]>;
   conversation(id: string): Promise<{ found: boolean; messages: Msg[] }>;
-  failedToolCalls(conversationId: string): Promise<Array<{ tool: string; outcome: string }>>;
+  failedToolCalls(conversationId: string): Promise<Array<{ tool: string; outcome: string; status: number }>>;
   usage(): Promise<{ whatsappUsed: number; whatsappLimit: number; billed: number }>;
   search(query: string): Promise<string[]>;
 }
@@ -44,7 +44,7 @@ export function mcpProbe(ts: ToolSet): Probe {
     },
     async failedToolCalls(conversationId) {
       const r = parse(await j("get_tool_calls", { conversation_id: conversationId, failed_only: true }));
-      return r.calls.map((c: any) => ({ tool: c.tool_name, outcome: c.outcome }));
+      return r.calls.map((c: any) => ({ tool: c.tool_name, outcome: c.outcome, status: c.http_status }));
     },
     async usage() {
       const r = parse(await j("get_usage", {}));
@@ -82,7 +82,7 @@ export function restProbe(ts: ToolSet, storeId: string): Probe {
     },
     async failedToolCalls(conversationId) {
       const rows = parse(await get(`/api/v1/stores/${storeId}/tool-execution-logs`, { conversation_id: conversationId })).data;
-      return rows.filter((r: any) => (r.error_type ?? "success") !== "success").map((r: any) => ({ tool: r.tool_name, outcome: r.error_type }));
+      return rows.filter((r: any) => (r.error_type ?? "success") !== "success").map((r: any) => ({ tool: r.tool_name, outcome: r.error_type, status: r.response_status }));
     },
     async usage() {
       const q = parse(await get("/api/v1/dashboard/quota", { store_id: storeId })).data;
