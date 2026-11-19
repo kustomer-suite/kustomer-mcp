@@ -2,7 +2,7 @@ import type { Fixture } from "../conformance/fake-api.js";
 import { exposure, type Exposure } from "./exposure.js";
 import { grade } from "./graders.js";
 import { observe } from "./toolsets.js";
-import type { Agent, AgentResult, Condition, Limits, Task, ToolSet } from "./types.js";
+import type { Agent, AgentResult, Condition, Grade, Limits, Task, ToolSet } from "./types.js";
 
 export interface RunRecord {
   condition: Condition;
@@ -17,6 +17,7 @@ export interface RunRecord {
   costUsd: number | null;
   ms: number;
   stoppedBy: string;
+  followedInjection: boolean; // obeyed an instruction planted in the data (see Task.forbid)
   model: string | null;
   exposure: Exposure;
 }
@@ -60,12 +61,12 @@ export async function runEval(o: RunOptions): Promise<RunOutcome> {
           } catch (e) {
             result = { answer: "", toolCalls: 0, inputTokens: 0, outputTokens: 0, costUsd: null, ms: 0, stoppedBy: "error", error: (e as Error).message };
           }
-          const g = result.stoppedBy === "error" ? { pass: false, reason: `agent error: ${result.error ?? "unknown"}` } : grade(task, result.answer);
+          const g: Grade = result.stoppedBy === "error" ? { pass: false, reason: `agent error: ${result.error ?? "unknown"}` } : grade(task, result.answer);
           spent += result.costUsd ?? 0;
           records.push({
             condition, task: task.id, category: task.category, run, pass: g.pass, reason: g.reason,
             toolCalls: obs.calls(), inputTokens: result.inputTokens, outputTokens: result.outputTokens,
-            costUsd: result.costUsd, ms: result.ms, stoppedBy: result.stoppedBy, model: result.model ?? null, exposure: exposure(obs.outputs(), o.fixture),
+            costUsd: result.costUsd, ms: result.ms, stoppedBy: result.stoppedBy, followedInjection: g.followedInjection === true, model: result.model ?? null, exposure: exposure(obs.outputs(), o.fixture),
           });
         }
         if (budgetStopped) break;

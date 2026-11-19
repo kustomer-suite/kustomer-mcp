@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
-import { fixture, startFakeApi, type FakeApi } from "../conformance/fake-api.js";
+import { fixture as basicFixture, startFakeApi, type FakeApi, type FakeApiOptions, type Fixture } from "../conformance/fake-api.js";
 import { createServer } from "../src/server.js";
 import { mcpToolSet, restToolSet } from "./toolsets.js";
 import type { Condition, ToolSet } from "./types.js";
@@ -15,8 +15,8 @@ export interface Lab {
   close(): Promise<void>;
 }
 
-export async function startLab(): Promise<Lab> {
-  const api = await startFakeApi();
+export async function startLab(fixture: Fixture = basicFixture, opts: FakeApiOptions = {}): Promise<Lab> {
+  const api = await startFakeApi(fixture, opts);
   return {
     api,
     async makeToolSet(condition) {

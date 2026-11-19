@@ -20,7 +20,17 @@ export interface FakeApi {
 
 // A stand-in for the Kustomer Suite REST API, serving the fixture with the
 // same response envelope and the same tenant rule: a token sees one store.
-export async function startFakeApi(fx: Fixture = fixture): Promise<FakeApi> {
+//
+// `nearestAlways` mirrors what the real search does and a keyword filter does
+// not: it never answers "nothing found". When no passage matches the query it
+// still returns the nearest ones, at a similarity that looks like a weak match
+// (the hosted tool returned about 0.74 for a nonsense query), so an agent has
+// to decide for itself that the knowledge base does not cover the question.
+export interface FakeApiOptions {
+  nearestAlways?: boolean;
+}
+
+export async function startFakeApi(fx: Fixture = fixture, opts: FakeApiOptions = {}): Promise<FakeApi> {
   const requests: RecordedRequest[] = [];
   const storeId = fx.store.id;
 
@@ -71,10 +81,10 @@ export async function startFakeApi(fx: Fixture = fixture): Promise<FakeApi> {
           const hits = words.filter((w) => text.includes(w)).length;
           return { chunk_text: k.chunk_text, title: k.title, kb_item_id: k.kb_item_id, similarity: words.length ? hits / words.length : 0 };
         })
-        .filter((r) => r.similarity > 0)
-        .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, body.limit ?? 5);
-      return ok(scored);
+        .sort((a, b) => b.similarity - a.similarity);
+      const matched = scored.filter((r) => r.similarity > 0);
+      const rows = matched.length > 0 || !opts.nearestAlways ? matched : scored.map((r) => ({ ...r, similarity: 0.74 }));
+      return ok(rows.slice(0, body.limit ?? 5));
     }
 
     const logs = p.match(/^\/api\/v1\/stores\/([^/]+)\/tool-execution-logs$/);
