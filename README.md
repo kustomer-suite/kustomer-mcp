@@ -29,25 +29,85 @@ The reasoning, how each protection was verified, and what the verification caugh
 - **The contract is enforced, not described.** The server loads its tool list from `spec/tools.json`, rejects inputs outside the schema, and refuses to return an output that breaks its own schema.
 - **One contract, two servers, one proxy.** The production server is written in Go inside the Kustomer Suite API and serves the tools over stateless Streamable HTTP. This TypeScript server is the reference implementation, run against a fake REST API. Both must pass the same conformance suite. The npm package is neither: it is a stdio proxy that forwards to the hosted server with your token, so there is one implementation of the contract to get right.
 
-## Use it
+## Install
 
-Requires Node 20+.
+About five minutes. You need a **token** (it starts with `ksm_`). There is no self-service screen yet, so the maintainer issues it: it is bound to one store, read-only, and can be revoked at any time. Treat it like a password.
+
+Pick the client you use. Replace `ksm_YOUR_TOKEN` with your token.
+
+### Claude Code (install and connection tested)
+
+Either of these, run once in a terminal:
+
+```bash
+# A. Straight to the hosted server (no Node needed)
+claude mcp add --transport http kustomer https://mcp.kustomersuite.com/mcp \
+  --header "Authorization: Bearer ksm_YOUR_TOKEN"
+
+# B. Through the npm package (needs Node 20+)
+claude mcp add kustomer -e KUSTOMER_TOKEN=ksm_YOUR_TOKEN -- npx -y kustomersuite-mcp
+```
+
+Order matters in B: the name (`kustomer`) comes **before** `-e`, because `-e` swallows what follows it. Leave out `--scope`: the `project` scope asks you to approve the server interactively and shows "Pending approval" until you do.
+
+Check it: run `claude mcp list` (it should say `kustomer ... Connected`), or type `/mcp` inside Claude Code.
+
+### Claude Desktop (same package, not yet tried by the maintainer)
+
+Open the config file, add the block below, then **quit Claude Desktop completely and start it again**.
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
-    "kustomersuite": {
+    "kustomer": {
       "command": "npx",
       "args": ["-y", "kustomersuite-mcp"],
-      "env": { "KUSTOMER_TOKEN": "ksm_…" }
+      "env": { "KUSTOMER_TOKEN": "ksm_YOUR_TOKEN" }
     }
   }
 }
 ```
 
+If the file already has `mcpServers`, add only the `"kustomer": { ... }` entry inside it. Needs Node 20+. On Windows, if Claude Desktop cannot find `npx`, use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "kustomersuite-mcp"]`.
+
+### Cursor (same package, not yet tried by the maintainer)
+
+Put the same JSON as above in `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project), then reload Cursor. Do not commit a file that holds a token.
+
+### Try it
+
+Ask the agent, in plain words:
+
+- "Which conversations are waiting for a human?"
+- "Show me the last conversation and tell me how the bot answered: which knowledge-base documents did it use, and how confident was it?"
+- "How many AI tokens did we use this period?"
+- "Did any of the bot's calls to our store's tools fail this week?"
+
+It should call `list_conversations`, `get_conversation`, `get_usage` and `get_tool_calls`. Nothing it does changes your customers' conversations or settings (reading usage may create the current period's usage row; see the [case study](docs/case-study.md)).
+
+### If it does not work
+
+| You see | Cause and fix |
+|---|---|
+| `KUSTOMER_TOKEN is not set` | The client did not pass the token. In Claude Desktop and Cursor it must be inside the `"env"` block; in Claude Code use `-e KUSTOMER_TOKEN=...` after the server name. |
+| `... is not a Kustomer Suite MCP token (they start with ksm_)` | Wrong string: a login token or another service's key. Use the `ksm_...` token. |
+| `401`, "invalid" or "revoked" | The token expired (they last 90 days by default) or was revoked. Ask the maintainer for a new one. |
+| `429` | Rate limit: 60 calls a minute, and 10 knowledge-base searches a minute per token. Wait a minute. |
+| `Pending approval` in `claude mcp list` | The server was added with `--scope project`. Remove it and add it again without `--scope`. |
+| `Invalid environment variable format` | In `claude mcp add`, the server name must come before `-e`. |
+| Slow or silent first start with `npx` | It is downloading the package. Wait, or run `npx -y kustomersuite-mcp` once by hand (it prints the missing-token message and exits, which is fine). |
+| Node errors | The npm package needs Node 20 or newer (`node --version`). The hosted-server option A for Claude Code needs no Node. |
+
+To remove it: `claude mcp remove kustomer`, or delete the entry from the config file. To stop a token from working at all, have it revoked; a revoked token is refused on the next call.
+
+## Tokens and settings
+
 `KUSTOMER_TOKEN` is the only setting. The token is bound to one store on the server, so there is no store id to give; and the endpoint is fixed in the code, so a token is never sent to a host you (or anyone who can set an environment variable) typed. `KUSTOMER_API_URL` and `KUSTOMER_STORE_ID` from v0.1 no longer exist.
 
-A token is created for one store with the scope `mcp_read`, shown once, expires after 90 days unless you choose otherwise, and can be revoked at any time (a revoked token is refused on the next call). A dashboard screen for this is planned; today a store owner, admin or developer creates it through the API (`POST /api/v1/api-keys` with `{"store_id": …, "name": …, "scope": "mcp_read"}`).
+A token is created for one store with the scope `mcp_read`, shown once, expires after 90 days unless you choose otherwise, and can be revoked at any time (a revoked token is refused on the next call). A dashboard screen for this is planned; today a store owner, admin or developer creates it through the API (`POST /api/v1/api-keys` with `{"store_id": ..., "name": ..., "scope": "mcp_read"}`).
 
 Published on npm as [`kustomersuite-mcp`](https://www.npmjs.com/package/kustomersuite-mcp). To run from source instead: `npm install && npm run build`, then point `command` at `node dist/src/cli.js`.
 
