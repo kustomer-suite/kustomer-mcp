@@ -58,7 +58,12 @@ export function inlineRefs(node: unknown, defs: Record<string, JsonSchema>): unk
 }
 
 export function loadSpec(): Spec {
-  const raw = loadRawSpec();
+  return specFrom(loadRawSpec());
+}
+
+// The same, from a spec that is already in memory: a bundle for a runtime without
+// a file system (the Supabase Edge Function) imports spec/tools.json and calls this.
+export function specFrom(raw: Spec): Spec {
   return {
     ...raw,
     tools: raw.tools.map((t) => ({

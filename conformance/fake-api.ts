@@ -30,22 +30,31 @@ export interface FakeApiOptions {
   nearestAlways?: boolean;
 }
 
-export async function startFakeApi(fx: Fixture = fixture, opts: FakeApiOptions = {}): Promise<FakeApi> {
-  const requests: RecordedRequest[] = [];
+// The request as the handler sees it: no Node types, so the same code runs in a
+// Node HTTP server (the conformance suite, the evaluation) and behind an
+// injected `fetch` (the Supabase Edge Function, which cannot listen on a port).
+export interface HandlerInput {
+  method: string;
+  path: string;
+  query: Record<string, string>;
+  authorization?: string;
+  body: string;
+}
+export interface HandlerOutput {
+  status: number;
+  body: unknown;
+}
+export type FixtureHandler = (i: HandlerInput) => Promise<HandlerOutput>;
+
+export function createFixtureHandler(fx: Fixture = fixture, opts: FakeApiOptions = {}): FixtureHandler {
   const storeId = fx.store.id;
+  return async ({ method, path: p, query, authorization, body: rawBody }) => {
+    if (authorization !== `Bearer ${fx.token}`) return { status: 401, body: { success: false, error: "unauthorized" } };
 
-  const server = createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", "http://fake");
-    const query = Object.fromEntries(url.searchParams);
-    requests.push({ method: req.method ?? "", path: url.pathname, query });
+    const deny = (): HandlerOutput => ({ status: 403, body: { success: false, error: "forbidden" } });
+    const ok = (data: unknown): HandlerOutput => ({ status: 200, body: { success: true, data } });
 
-    if (req.headers.authorization !== `Bearer ${fx.token}`) return send(res, 401, { success: false, error: "unauthorized" });
-
-    const deny = () => send(res, 403, { success: false, error: "forbidden" });
-    const ok = (data: unknown) => send(res, 200, { success: true, data });
-    const p = url.pathname;
-
-    if (req.method === "GET" && p === "/api/v1/conversations") {
+    if (method === "GET" && p === "/api/v1/conversations") {
       if (query.store_id !== storeId) return deny();
       let items = fx.conversations.filter((c) => c.store_id === storeId);
       if (query.channel) items = items.filter((c) => c.channel === query.channel);
@@ -63,15 +72,15 @@ export async function startFakeApi(fx: Fixture = fixture, opts: FakeApiOptions =
     }
 
     const conv = p.match(/^\/api\/v1\/conversations\/([^/]+)$/);
-    if (req.method === "GET" && conv) {
+    if (method === "GET" && conv) {
       const c = fx.conversations.find((x) => x.id === decodeURIComponent(conv[1]!));
-      if (!c || c.store_id !== storeId) return send(res, 404, { success: false, error: "Conversation not found" });
+      if (!c || c.store_id !== storeId) return { status: 404, body: { success: false, error: "Conversation not found" } };
       const { messages, ...rest } = c;
       return ok({ conversation: rest, messages: messages.map((m) => ({ ...m, conversation_id: c.id })) });
     }
 
-    if (req.method === "POST" && p === "/api/v1/knowledge-base/search") {
-      const body = JSON.parse((await readBody(req)) || "{}") as { store_id?: string; query?: string; limit?: number };
+    if (method === "POST" && p === "/api/v1/knowledge-base/search") {
+      const body = JSON.parse(rawBody || "{}") as { store_id?: string; query?: string; limit?: number };
       if (body.store_id !== storeId) return deny();
       const words = (body.query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
       const scored = fx.knowledge
@@ -88,7 +97,7 @@ export async function startFakeApi(fx: Fixture = fixture, opts: FakeApiOptions =
     }
 
     const logs = p.match(/^\/api\/v1\/stores\/([^/]+)\/tool-execution-logs$/);
-    if (req.method === "GET" && logs) {
+    if (method === "GET" && logs) {
       if (decodeURIComponent(logs[1]!) !== storeId) return deny();
       let rows = fx.toolLogs.filter((l) => l.store_id === storeId);
       // Mirrors the real handler: conversation_id wins and ignores the rest.
@@ -103,12 +112,51 @@ export async function startFakeApi(fx: Fixture = fixture, opts: FakeApiOptions =
       return ok(rows);
     }
 
-    if (req.method === "GET" && p === "/api/v1/dashboard/quota") {
+    if (method === "GET" && p === "/api/v1/dashboard/quota") {
       if (query.store_id !== storeId) return deny();
       return ok(fx.quota);
     }
 
-    return send(res, 404, { success: false, error: "not found" });
+    return { status: 404, body: { success: false, error: "not found" } };
+  };
+}
+
+// The fixture as a `fetch`: what KustomerApi calls when given `fetch` in its
+// config. `record` sees every request, as the Node server's `requests` does.
+export function fixtureFetch(fx: Fixture = fixture, opts: FakeApiOptions = {}, record?: (r: RecordedRequest) => void): typeof fetch {
+  const handle = createFixtureHandler(fx, opts);
+  return async (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    const method = init?.method ?? "GET";
+    const query = Object.fromEntries(url.searchParams);
+    record?.({ method, path: url.pathname, query });
+    const out = await handle({
+      method,
+      path: url.pathname,
+      query,
+      authorization: new Headers(init?.headers).get("authorization") ?? undefined,
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+    return new Response(JSON.stringify(out.body), { status: out.status, headers: { "Content-Type": "application/json" } });
+  };
+}
+
+export async function startFakeApi(fx: Fixture = fixture, opts: FakeApiOptions = {}): Promise<FakeApi> {
+  const requests: RecordedRequest[] = [];
+  const handle = createFixtureHandler(fx, opts);
+
+  const server = createServer(async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://fake");
+    const query = Object.fromEntries(url.searchParams);
+    requests.push({ method: req.method ?? "", path: url.pathname, query });
+    const out = await handle({
+      method: req.method ?? "",
+      path: url.pathname,
+      query,
+      authorization: req.headers.authorization,
+      body: req.method === "POST" ? await readBody(req) : "",
+    });
+    send(res, out.status, out.body);
   });
 
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
