@@ -38,7 +38,7 @@
     "test": "vitest run",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "eval": "npm run build && node dist/eval/cli.js",
-    "build:edge": "esbuild edge/index.ts --bundle --format=esm --platform=node --target=es2022 --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=supabase/functions/kustomer-mcp/index.ts"
+    "build:edge": "esbuild edge/index.ts --bundle --format=esm --platform=node --target=es2022 --alias:os=node:os --alias:fs=node:fs --alias:net=node:net --alias:tls=node:tls --alias:crypto=node:crypto --alias:stream=node:stream --alias:perf_hooks=node:perf_hooks --banner:js=\"import { createRequire } from 'node:module'; import { Buffer as NodeBuffer } from 'node:buffer'; import { setImmediate as nodeSetImmediate, clearImmediate as nodeClearImmediate } from 'node:timers'; const require = createRequire(import.meta.url); globalThis.Buffer ??= NodeBuffer; globalThis.setImmediate ??= nodeSetImmediate; globalThis.clearImmediate ??= nodeClearImmediate;\" --outfile=supabase/functions/kustomer-mcp/index.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
