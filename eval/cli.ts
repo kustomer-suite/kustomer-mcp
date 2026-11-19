@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { fixture as basicFixture } from "../conformance/fake-api.js";
 import { buildHardFixture } from "./fixture-hard.js";
@@ -59,6 +59,7 @@ function agentFromArgs(): Agent {
     const num = (k: string) => (process.env[k] ? Number(process.env[k]) : undefined);
     return anthropicAgent({
       baseUrl: need("EVAL_API_URL"), apiKey: need("EVAL_API_KEY"), model: need("EVAL_MODEL"),
+      skill: process.argv.includes("--skill") ? readFileSync(arg("skill", ""), "utf8").replace(/^---[\s\S]*?---\s*/, "") : undefined, // frontmatter is for the skill loader, not the model
       priceInPerMTok: num("EVAL_PRICE_IN"), priceOutPerMTok: num("EVAL_PRICE_OUT"),
     });
   }

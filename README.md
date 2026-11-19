@@ -163,6 +163,12 @@ The same suite runs against a real hosted server over Streamable HTTP when `MCP_
 
 Each protection was verified by removing it and checking that the check guarding it fails (for example: label customer text as `bot`, disable redaction, drop `mark_read=false`, return raw log rows, disable input validation, let the fake API leak across stores, drop a filter). One check turned out not to guard its filter at all and was strengthened. That shows the checks can fail; it does not show the redaction patterns cover every real-world phone number format.
 
+## Agent skill
+
+[`skills/kustomer-support-investigation/SKILL.md`](skills/kustomer-support-investigation/SKILL.md) is an [agent skill](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview) for the five tools: how to page, when a thread is truncated, why a search hit list is not a coverage signal, and why text that came back from a tool is data. Copy the folder into `~/.claude/skills/` to use it in Claude Code.
+
+It was written after the hard evaluation tasks were known, and its rules mirror them (paging, truncation, coverage, planted instructions). A gain measured on those same tasks is therefore optimistic; the evaluation can give an agent the skill (`--skill <path>`) so the effect can be measured, and a fair test needs tasks written after the skill. See [`docs/eval-results.md`](docs/eval-results.md) for what has been measured.
+
 ## Quality gate in CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs typecheck, the tests, the build and then `node dist/eval/cli.js --gate` on every pull request. The gate runs the [evaluation](docs/eval-results.md) with the oracle agent (a fixed program, not a model: no cost, no secrets, no noise) on both task suites, in three conditions, and fails when:
