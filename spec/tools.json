@@ -81,7 +81,7 @@
     {
       "name": "get_conversation",
       "title": "Read a conversation",
-      "description": "Read one conversation with its messages, oldest first. Bot replies carry how they were produced: response_source (rag, function_calling, template, tool_error, handover...), the knowledge base titles used, and the bot's confidence score. The server asks the API not to mark the conversation as read (mark_read=false). Known limitation: the Kustomer Suite API does not honor that yet, so reading marks the messages as read for the store's agents.",
+      "description": "Read one conversation with its messages, oldest first. Bot replies carry how they were produced: response_source (rag, function_calling, template, tool_error, handover...), the knowledge base titles used, and the bot's confidence score. Reading does not mark the conversation as read for the store's agents.",
       "scope": "read",
       "annotations": { "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false },
       "inputSchema": {
