@@ -37,7 +37,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
-    "eval": "npm run build && node dist/eval/cli.js"
+    "eval": "npm run build && node dist/eval/cli.js",
+    "build:edge": "esbuild edge/index.ts --bundle --format=esm --platform=node --target=es2022 --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\" --outfile=supabase/functions/kustomer-mcp/index.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
   },

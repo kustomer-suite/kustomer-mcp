@@ -130,7 +130,7 @@ Each protection was verified by removing it and checking that the check guarding
 - A `list_knowledge` tool (titles, status and chunk counts, no full text), so an agent can check what the knowledge base holds.
 - Write tools, designed but not built: separate token scopes per area (knowledge base, system prompt, store tools, reply templates), each following the role the admin panel already requires; deletes need the exact id repeated; every change is audited with its before and after values; secrets can be set but never read back. Replying and taking over a conversation come after.
 - Fixing the `search_knowledge` recall defect described in the case study (a migration is written and tested against a copy; it is not deployed).
-- A Supabase Edge Function deployment of the TypeScript server, and a small demo and documentation site.
+- A Supabase Edge Function deployment of the TypeScript server: built and tested (the bundle passes the hosted conformance tests, 24 of 24, in a Deno process), not yet deployed; see [`docs/supabase-edge.md`](docs/supabase-edge.md). A small demo and documentation site after that.
 - Task-level evals: first result in [`docs/eval-results.md`](docs/eval-results.md) (two models, 11 easy tasks: equal success, protected data shown in 12/33 and 11/31 raw-REST runs and 0 with the server); harder tasks and weaker models next.
 
 ## License

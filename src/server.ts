@@ -3,7 +3,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import { ApiError, KustomerApi, type ApiConfig } from "./api.js";
-import { loadSpec, type ToolSpec } from "./spec.js";
+import { loadSpec, type Spec, type ToolSpec } from "./spec.js";
 import { handlers, type ToolContext } from "./tools.js";
 import { makeRedactor } from "./untrusted.js";
 
@@ -18,8 +18,7 @@ interface CompiledTool {
 
 // The low-level Server is used on purpose: tool schemas come verbatim from
 // spec/tools.json (JSON Schema), the contract shared with the Go server.
-export function createServer(cfg: ApiConfig): Server {
-  const spec = loadSpec();
+export function createServer(cfg: ApiConfig, spec: Spec = loadSpec()): Server {
   const ajv = new Ajv({ allErrors: true, useDefaults: true, strict: false });
   const tools = new Map<string, CompiledTool>();
   for (const t of spec.tools) {

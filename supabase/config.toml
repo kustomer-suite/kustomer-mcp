@@ -1,0 +1,6 @@
+# Only what `supabase functions deploy` needs. The function does its own token
+# check (DEMO_TOKEN), so the platform's JWT check is switched off for it.
+project_id = "kustomer-mcp"
+
+[functions.kustomer-mcp]
+verify_jwt = false
