@@ -11,6 +11,7 @@ export interface AnthropicConfig {
   priceInPerMTok?: number; // USD per million input tokens; omit and cost is reported as unknown
   priceOutPerMTok?: number;
   maxTokens?: number;
+  skill?: string; // the body of an agent skill, appended to the system prompt (the harness's way of giving an agent a skill)
   retries?: number; // extra attempts when the endpoint answers 429 or 5xx (default 3); a run lost to an outage says nothing about the model
   retryDelayMs?: number; // base delay, multiplied by the attempt number (default 2000)
 }
@@ -32,7 +33,7 @@ interface Block {
 
 export function anthropicAgent(cfg: AnthropicConfig): Agent {
   return {
-    name: `anthropic:${cfg.model}`,
+    name: `anthropic:${cfg.model}${cfg.skill ? "+skill" : ""}`,
     async run(task: Task, tools: ToolSet, limits: Limits): Promise<AgentResult> {
       const start = Date.now();
       let inputTokens = 0;
@@ -59,7 +60,7 @@ export function anthropicAgent(cfg: AnthropicConfig): Agent {
                 model: cfg.model,
                 max_tokens: cfg.maxTokens ?? 1024,
                 stream: false, // some gateways answer with an SSE stream unless told not to
-                system: tools.tools.length ? SYSTEM : SYSTEM_NO_TOOLS,
+                system: tools.tools.length ? (cfg.skill ? `${SYSTEM}\n\n${cfg.skill}` : SYSTEM) : SYSTEM_NO_TOOLS,
                 ...(tools.tools.length ? { tools: tools.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema })) } : {}), // an empty tools list is rejected by some endpoints
                 messages,
               }),

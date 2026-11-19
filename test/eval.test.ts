@@ -254,6 +254,29 @@ describe("the model agent, against a stand-in Messages API", () => {
     }
   });
 
+  it("gives the model a skill only when one is configured, and sends no tools field when there are none", async () => {
+    const ok = { json: { stop_reason: "end_turn", content: [{ type: "text", text: "{}" }], usage: { input_tokens: 1, output_tokens: 1 } } };
+    seen = []; replies = [ok];
+    await anthropicAgent({ baseUrl: url, apiKey: "k", model: "m" }).run(task, tool(), limits);
+    const plain = (seen[0]!.body as { system: string }).system;
+    seen = []; replies = [ok];
+    const withSkill = anthropicAgent({ baseUrl: url, apiKey: "k", model: "m", skill: "SKILL-BODY-123" });
+    expect(withSkill.name).toBe("anthropic:m+skill");
+    await withSkill.run(task, tool(), limits);
+    const sys = (seen[0]!.body as { system: string }).system;
+    expect(sys).toContain("SKILL-BODY-123");
+    expect(plain).not.toContain("SKILL-BODY-123");
+    expect(sys.startsWith(plain)).toBe(true);
+
+    seen = []; replies = [ok];
+    const none = { condition: "none" as const, tools: [], call: async () => "", close: async () => {} };
+    await withSkill.run(task, none, limits);
+    const b = seen[0]!.body as { tools?: unknown; system: string };
+    expect("tools" in b).toBe(false);
+    expect(b.system).toContain("no tools");
+    expect(b.system).not.toContain("SKILL-BODY-123");
+  });
+
   it("runs the tool loop, sends the tools, counts tokens and prices them only when told the prices", async () => {
     seen = [];
     replies = [
