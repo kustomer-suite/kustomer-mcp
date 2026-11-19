@@ -139,6 +139,18 @@ The same suite runs against a real hosted server over Streamable HTTP when `MCP_
 
 Each protection was verified by removing it and checking that the check guarding it fails (for example: label customer text as `bot`, disable redaction, drop `mark_read=false`, return raw log rows, disable input validation, let the fake API leak across stores, drop a filter). One check turned out not to guard its filter at all and was strengthened. That shows the checks can fail; it does not show the redaction patterns cover every real-world phone number format.
 
+## Quality gate in CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs typecheck, the tests, the build and then `node dist/eval/cli.js --gate` on every pull request. The gate runs the [evaluation](docs/eval-results.md) with the oracle agent (a fixed program, not a model: no cost, no secrets, no noise) on both task suites, in three conditions, and fails when:
+
+- a task can no longer be solved through the server (a tool lost a field, a limit cut an answer);
+- the server shows protected data to the agent;
+- one of its two controls stops working: raw REST must still show protected data on the same store, and the no-tool condition must not be able to pass most tasks. Without them a passing gate could mean the check was broken.
+
+The gate was shown to fail by adding a raw log row to `get_tool_calls` (exit code 1), and `test/eval-gate.test.ts` breaks each check in turn. It checks the tools and the contract; it says nothing about how a model behaves, which is what the model runs in [`docs/eval-results.md`](docs/eval-results.md) are for.
+
+The evaluation has three conditions: `mcp` (the five tools), `rest` (raw access to the same API) and `none` (the question and no tools: the baseline a tool has to beat). Pass rates are printed with a 95% Wilson interval, because 33 runs say less than a bare "100%" suggests.
+
 ## Roadmap
 
 - A dashboard screen to create, scope and revoke tokens; OAuth for remote MCP clients.

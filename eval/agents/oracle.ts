@@ -12,6 +12,8 @@ export function oracleAgent(storeId: string): Agent {
     name: "oracle",
     async run(task: Task, tools: ToolSet): Promise<AgentResult> {
       const start = Date.now();
+      // With no tools there is nothing to look up: an empty answer shows the graders reject it.
+      if (tools.condition === "none") return { answer: "{}", toolCalls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, ms: 0, stoppedBy: "done" };
       const probe: Probe = tools.condition === "mcp" ? mcpProbe(tools) : restProbe(tools, storeId);
       const answer = JSON.stringify(await solve(task, probe, storeId));
       return { answer, toolCalls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, ms: Date.now() - start, stoppedBy: "done" };

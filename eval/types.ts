@@ -1,7 +1,8 @@
 // Task-level evaluation: does an agent do better with the MCP server than with
 // the access it would otherwise have (raw REST)? These are the shared types.
 
-export type Condition = "mcp" | "rest";
+// "none" is the no-tool baseline: the model gets the question and no tools at all.
+export type Condition = "mcp" | "rest" | "none";
 
 export interface ToolDef {
   name: string;
