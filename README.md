@@ -169,6 +169,10 @@ Each protection was verified by removing it and checking that the check guarding
 
 It was written after the hard evaluation tasks were known, and its rules mirror them (paging, truncation, coverage, planted instructions). A gain measured on those same tasks is therefore optimistic; the evaluation can give an agent the skill (`--skill <path>`) so the effect can be measured, and a fair test needs tasks written after the skill. See [`docs/eval-results.md`](docs/eval-results.md) for what has been measured.
 
+## Results in Braintrust
+
+`node dist/eval/braintrust-cli.js` sends the stored results to [Braintrust](https://www.braintrust.dev) as experiments, one per condition (for example `hard-sonnet-5.5-x10-mcp` next to `hard-sonnet-5.5-x10-rest`, and `hard-sonnet-5.5-no-tool-none`), so they can be compared side by side. It calls no model: the numbers are the ones in [`docs/eval-results/`](docs/eval-results/), with scores for pass, protected data shown to the agent and (for the injection tasks) obeying a planted instruction, plus tokens, cost and latency per run. Only synthetic data goes out, and runs the endpoint failed are not sent. Set `BRAINTRUST_API_KEY` and `BRAINTRUST_PROJECT_ID` in the environment (nothing is read from a file); `--dry-run` shows what would be sent. The numbers shown in Braintrust were checked against these results (for example 110/110 and 105/110 for the two Sonnet 5.5 conditions). The project is private; the result files in this repository are the record.
+
 ## Quality gate in CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs typecheck, the tests, the build and then `node dist/eval/cli.js --gate` on every pull request. The gate runs the [evaluation](docs/eval-results.md) with the oracle agent (a fixed program, not a model: no cost, no secrets, no noise) on both task suites, in three conditions, and fails when:
