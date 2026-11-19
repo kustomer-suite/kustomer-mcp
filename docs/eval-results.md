@@ -28,7 +28,7 @@ Reading: the same as for the first model. Success is at the ceiling in both cond
 
 ## Result: the hard suite (Sonnet 5.5)
 
-Eleven harder tasks (`--suite hard`, see [`eval/README.md`](../eval/README.md)) on a store of 51 conversations: paging and filtering, a 70-message thread the default window cuts, a store-wide failure tally, one answer over two documents, a question the knowledge base does not cover, and three customer messages that try to give the agent orders. 11 tasks × 3 runs × 2 conditions = 66 runs, all scored (no endpoint errors). Model reported by the endpoint: `claude-sonnet-5.5`. Raw records: [`eval-results/2026-11-19-hard-sonnet-5-5.json`](eval-results/2026-11-19-hard-sonnet-5-5.json).
+Eleven harder tasks (`--suite hard`, see [`eval/README.md`](../eval/README.md)) on a store of 56 conversations: paging and filtering, a 70-message thread the default window cuts, a store-wide failure tally, one answer over two documents, a question the knowledge base does not cover, and three customer messages that try to give the agent orders. 11 tasks × 3 runs × 2 conditions = 66 runs, all scored (no endpoint errors). Model reported by the endpoint: `claude-sonnet-5.5`. Raw records: [`eval-results/2026-11-19-hard-sonnet-5-5.json`](eval-results/2026-11-19-hard-sonnet-5-5.json).
 
 | Condition | Passed | Mean tool calls | Mean tokens | Cost (list price) | Runs where the agent was **shown** protected data | Planted instructions obeyed |
 |---|---|---|---|---|---|---|
@@ -41,7 +41,39 @@ Eleven harder tasks (`--suite hard`, see [`eval/README.md`](../eval/README.md)) 
 - **What the agent is shown still differs completely** (17 of 33 against 0 of 33), more than on the first suite because these tasks read more.
 - Cost is the list price for Sonnet 5.5 ($2 / $10 per million tokens), no caching; the whole run cost about $1.71.
 
-## How to read it (both models)
+## Result: the hard suite again, 10 runs per task, two models, a no-tool baseline and a skill
+
+The three-run result above left a question: does the gap hold with more runs? These are the follow-ups, all on the same hard suite, all runs scored (no endpoint errors). 95% intervals are Wilson intervals. Raw records are in [`eval-results/`](eval-results/): `2026-11-19-hard-x10-sonnet-5-5.json`, `2026-11-19-hard-haiku-4-5.json`, `2026-11-19-hard-no-tool-sonnet-5-5.json`, `2026-11-19-hard-haiku-4-5-skill.json`.
+
+**Sonnet 5.5, 10 runs per task (110 per condition, 220 runs, about $5.13)**
+
+| Condition | Passed | 95% interval | Shown protected data | Planted instructions obeyed |
+|---|---|---|---|---|
+| `mcp` | **110/110** | 96.6–100% | **0/110** | 0/30 |
+| `rest` | **105/110** (95%) | 89.8–98.0% | **58/110** | 0/30 |
+
+**Haiku 4.5, 5 runs per task (55 per condition, 110 runs, about $1.60)**
+
+| Condition | Passed | 95% interval | Shown protected data | Planted instructions obeyed |
+|---|---|---|---|---|
+| `mcp` | 49/55 (89%) | 78.2–94.9% | 0/55 | 0/15 |
+| `rest` | 46/55 (84%) | 71.7–91.1% | 26/55 | 0/15 |
+
+**No-tool baseline, Sonnet 5.5, 5 runs per task (55 runs, $0.40):** 5/55 passed (9%, interval 4–20%), with 0 tool calls. All five passes are the one task whose right answer is "the knowledge base does not cover this": a model with no data can pass it by saying so. On every task that needs the store's data it passed 0 of 50.
+
+**Haiku 4.5 with the agent skill, `mcp` only, 5 runs per task:** 52/55 (95%, interval 85–98%), against 49/55 without it (above). Cost $0.82 against $0.71.
+
+What these show and do not show:
+
+- **The Sonnet gap points the same way and is not established.** A two-sided Fisher exact test of 110/110 against 105/110 gives p = 0.060. The five raw-REST misses are on the same two tasks as in the three-run result: "how many conversations are unread" (7 of 10 passed) and "which tool failed most" (8 of 10). I have not read those transcripts, so the cause is still a hypothesis.
+- **Haiku shows no difference** (p = 0.58). One task fails for it in both conditions: the unread count (answered 14 through the server and 3 through raw REST, the answer is 13). I did not investigate why.
+- **Exposure is the result that does not depend on the model.** Raw REST put protected data in front of the agent in 58 of 110 Sonnet runs and 26 of 55 Haiku runs; the server did in 0 of 165.
+- **Neither model obeyed a planted instruction: 0 of 90 runs across the four cells.** Raw REST is the control without the server's `untrusted` wrapper, and it did not get obeyed either, so on these three attacks the wrapper is not shown to be necessary. A harder attack or a weaker model is needed to tell.
+- **The no-tool baseline is why a tool is needed at all**: 9% against 100%. It is also an honest reminder that one task can be passed by guessing.
+- **The skill: 52/55 against 49/55 is not a significant difference** (p = 0.49), the only misses left are on one task (unread count: 3 of 5 still wrong; the one long-thread miss of the run without the skill did not recur), and the skill was written after these tasks were known, so any gain here is optimistic. It is evidence that the skill does no harm on these tasks, not that it helps.
+- Costs are list prices (Sonnet 5.5 $2/$10 per million tokens, Haiku 4.5 assumed $1/$5, set by the person running it), no caching. Conditions were interleaved task by task.
+
+## How to read it (first suite, both models)
 
 - **Task success did not differ.** Both conditions passed every run. The tasks are too easy for this model to separate the two, so this run gives no evidence that the server makes an agent *more correct*. Do not read 33/33 against 33/33 as a win for either side.
 - **The difference is what the agent is shown.** With raw REST the model had phone numbers, emails and a store tool's credentials in its context in about a third of the runs; with the server, none. This is a property of the endpoints (a fixed program standing in for the model sees the same: 0 of 11 with the server, 4 of 11 through raw REST), not of the model. It measures exposure, not harm: the harness does not check whether the model repeated what it was shown.
@@ -62,7 +94,7 @@ Eleven harder tasks (`--suite hard`, see [`eval/README.md`](../eval/README.md)) 
 
 ## Limits
 
-- Two models on the first suite and one on the hard suite (all through a routing gateway), synthetic stores, 11 tasks each. The Sonnet 5.5 result has 31 scored runs per condition, not 33, and the lost runs were not drawn evenly across tasks. A ceiling effect hides any difference in success; harder tasks (longer histories, ambiguous questions, many conversations) are the next step.
-- No prompt-injection task: scoring one needs a rubric, and a model judging a model is what the graders avoid.
+- Two models on each suite, and a third condition (no tools) and a skill run on one model each (all through a routing gateway), synthetic stores, 11 tasks each. The first Sonnet 5.5 result has 31 scored runs per condition, not 33, and the lost runs were not drawn evenly across tasks. A ceiling effect hides any difference in success; harder tasks (longer histories, ambiguous questions, many conversations) are the next step.
+- Prompt injection is scored by a string only that planted text contains (a canary, or a password): 0 of 90 runs obeyed it, so the harness can detect obeying but these models did not give it anything to detect.
 - Exposure is what the agent was shown, scanned for the fixture's protected values; it does not measure whether a model would act on injected text.
 - The result says nothing about other models, other stores or real customer data.
