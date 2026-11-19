@@ -1,20 +1,13 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { createServer } from "./server.js";
+import { loadConfig } from "./config.js";
+import { createProxy, ProxyError } from "./proxy.js";
 
-function required(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    console.error(`kustomersuite-mcp: ${name} is not set`);
-    process.exit(1);
-  }
-  return v;
+try {
+  const proxy = await createProxy(loadConfig(process.env));
+  await proxy.server.connect(new StdioServerTransport());
+} catch (err) {
+  console.error(`kustomersuite-mcp: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(err instanceof ProxyError ? 2 : 1);
 }
-
-const server = createServer({
-  baseUrl: required("KUSTOMER_API_URL"),
-  token: required("KUSTOMER_TOKEN"),
-  storeId: required("KUSTOMER_STORE_ID"),
-});
-await server.connect(new StdioServerTransport());
