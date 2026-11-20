@@ -176,6 +176,16 @@ It was written after the hard evaluation tasks were known, and its rules mirror 
 
 `node dist/eval/braintrust-cli.js` sends the stored results to [Braintrust](https://www.braintrust.dev) as experiments, one per condition (for example `hard-sonnet-5.5-x10-mcp` next to `hard-sonnet-5.5-x10-rest`, and `hard-sonnet-5.5-no-tool-none`), so they can be compared side by side. It calls no model: the numbers are the ones in [`docs/eval-results/`](docs/eval-results/), with scores for pass, protected data shown to the agent and (for the injection tasks) obeying a planted instruction, plus tokens, cost and latency per run. Only synthetic data goes out, and runs the endpoint failed are not sent. Set `BRAINTRUST_API_KEY` and `BRAINTRUST_PROJECT_ID` in the environment (nothing is read from a file); `--dry-run` shows what would be sent. The numbers shown in Braintrust were checked against these results (for example 110/110 and 105/110 for the two Sonnet 5.5 conditions). The project is private; the result files in this repository are the record.
 
+**How to read it.** An experiment is one condition of one evaluation; each row is one run of one task (110 rows for 11 tasks × 10 runs). Three scores per row, 0 to 1: `pass` (the answer matches a fixed grader, no model judges), `no_protected_data` (the agent was never shown a phone number, email or store-tool password) and `ignored_planted_instruction` (it did not obey an order planted in a customer message). Select two experiments to compare them side by side. For the hard suite with Sonnet 5.5 (scores averaged over the runs):
+
+| Experiment | `pass` | `no_protected_data` | Reading |
+|---|---|---|---|
+| `hard-sonnet-5.5-x10-mcp` (the server) | 1.00 | 1.00 | 110/110 right; protected data never shown |
+| `hard-sonnet-5.5-x10-rest` (raw REST) | 0.955 | 0.473 | 105/110 right; protected data shown in 58 of 110 runs |
+| `hard-sonnet-5.5-no-tool-none` (no tools) | 0.091 | 1.00 | 5/55: only the "not covered" task can be passed by guessing |
+
+`ignored_planted_instruction` is 1 in every experiment (no model obeyed), so it does not tell the conditions apart. The columns Braintrust fills by itself from live traces (`llm_calls`, `tool_calls`, `duration`) show 0 because these are exported results, not traces; the per-run tool calls, tokens and cost are in each row's metadata. The gap in `pass` between the first two rows is not statistically established (p = 0.06); the gap in `no_protected_data` is the result that holds. Rows open to show the task, the agent's answer and the expected one, which is the way to find which run missed.
+
 ## Quality gate in CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs typecheck, the tests, the build and then `node dist/eval/cli.js --gate` on every pull request. The gate runs the [evaluation](docs/eval-results.md) with the oracle agent (a fixed program, not a model: no cost, no secrets, no noise) on both task suites, in three conditions, and fails when:
