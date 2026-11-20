@@ -31,7 +31,7 @@ The reasoning, how each protection was verified, and what the verification caugh
 
 ## Try it without a token (public sandbox)
 
-No token, no account, one minute. The same five tools run as a Supabase Edge Function over a **synthetic** store (the "Sandbox Hotel" that the [evaluation](docs/eval-results.md) uses: 56 conversations, a long thread, a failure log, and a knowledge base with a few documents). There is no database behind it and no real customer data in it. The token below is public on purpose: it only opens that fake store.
+No token, no account, one minute. The same five tools run as a Supabase Edge Function, answering from **Postgres and pgvector** (a schema the public API does not expose). The data is a scrubbed copy of one store of a pre-production installation of the platform, which holds test data and no real customers: 92 conversations, 507 messages, 149 store-tool calls and 58 knowledge passages with their stored vectors, in Indonesian. Contact data, metadata, IP addresses and the tools' endpoints, headers and bodies were left out; emails, phone numbers and given names in the text are replaced; links are replaced except those to the store's own staging endpoints. The token below is public on purpose: it only opens that store.
 
 ```bash
 claude mcp add --transport http kustomer-sandbox \
@@ -47,11 +47,12 @@ https://kbvyawyjdsukffmvkzkj.supabase.co/functions/v1/kustomer-mcp?token=demo_98
 
 Things to know:
 
-- **Some of the customer messages in it try to give the agent orders** ("ignore all previous instructions", a fake "system notice", a request to paste a password). They are there to test prompt-injection handling, so a good agent will tell you about them instead of obeying. Ask: "Read conversation `dddddddd-0000-4000-8000-000000000002` and tell me what the customer asked for."
-- Ask: "Which conversations are waiting for a human on WhatsApp?" or "What was the first thing the customer asked in `eeeeeeee-0000-4000-8000-000000000001`?" (the long thread is cut at its last 50 messages unless the agent asks for more; the answer is in the first message).
-- `search_knowledge` does not know when a question is not covered: ask "are pets allowed?" and it still returns its closest passages. The agent has to notice that none of them is about pets.
+- Ask: "List the most recent conversations in this store and tell me what each was about."
+- Ask: "Read conversation `c3c0ee43-37d2-4d1d-83f6-5f7634d5f657`, a thread of 303 messages. What did the customer ask first, and which of the store's tools were called?" (the thread is cut at its last 50 messages unless the agent asks for more).
+- Ask: "Can the AI's operating hours be configured?" for `search_knowledge`, a real vector search: the question is embedded with the same model that made the stored vectors (`text-embedding-ada-002`, the model production uses). It does not know when a question is not covered; it returns its closest passages and the agent has to judge them.
+- It is a **snapshot**: nothing in it changes, and the store has no conversation waiting for a human, so `handover_status=pending` returns nothing.
 - Shared and rate-limited by the free tier of the hosting plan; the token may be rotated at any time. If it stops working, open an issue.
-- This is the TypeScript reference server, not the production Go server. Both pass the same [conformance suite](#conformance-suite). How it was built and deployed: [`docs/supabase-edge.md`](docs/supabase-edge.md).
+- This is the TypeScript reference server, not the production Go server. Asked the same questions with the same client over the same store, it answered the same as the hosted production server for all 92 conversations, 12 tool-call logs and the usage; for `search_knowledge` the same documents in the same order, with scores that differ by up to 0.0002 (8 queries). How it was built, compared and deployed: [`docs/supabase-edge.md`](docs/supabase-edge.md).
 
 ## Install
 
