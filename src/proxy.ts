@@ -10,7 +10,7 @@ import {
 import type { ProxyConfig } from "./config.js";
 
 export const PROXY_NAME = "kustomersuite-mcp";
-export const PROXY_VERSION = "0.2.0";
+export const PROXY_VERSION = "1.0.0";
 
 export class ProxyError extends Error {}
 

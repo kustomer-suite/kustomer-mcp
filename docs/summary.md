@@ -6,7 +6,7 @@ The server is the smaller part. The point of the project is **how it was checked
 
 ## What exists
 
-- **A production server** in Go, inside the platform, behind per-store read-only tokens (private repository). **A TypeScript reference server** and an npm stdio proxy (this repository). **The same TypeScript server as a Supabase Edge Function.**
+- **A production server** in Go, inside the platform, behind per-store read-only tokens (private repository). **A TypeScript reference server** and an npm stdio proxy (this repository). **The same TypeScript server as a Supabase Edge Function**, a public sandbox that answers from Postgres and pgvector over a scrubbed copy of one pre-production store; asked the same questions, it answers the same as the production server (92 of 92 conversations, 12 of 12 tool-call logs, same documents in the same order for 8 searches).
 - **One conformance suite** that all of them must pass, through a real MCP client: tenant isolation by listing, by id, by search and in tool calls; customer text always wrapped as untrusted; PII redacted; store-tool secrets never returned.
 - **An evaluation harness** with a fixed-program oracle (proves every task is solvable), deterministic graders (no model judges a model), an exposure scanner (what the agent was *shown*), and a harder suite with long threads, aggregation, an uncovered question and three planted prompt injections.
 
