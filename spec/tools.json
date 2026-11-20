@@ -81,7 +81,7 @@
     {
       "name": "get_conversation",
       "title": "Read a conversation",
-      "description": "Read one conversation with its messages, oldest first. Bot replies carry how they were produced: response_source (rag, function_calling, template, tool_error, handover...), the knowledge base titles used, and the bot's confidence score. Reading does not mark the conversation as read for the store's agents.",
+      "description": "Read one conversation with its messages, oldest first. Bot replies carry how they were produced: response_source (rag, function_calling, template, tool_error, handover...), the knowledge base titles used, and the bot's confidence score. Reading does not mark the conversation as read for the store's agents. Long threads are cut to the most recent max_messages: when truncated is true, call again with before set to next_before to read earlier messages.",
       "scope": "read",
       "annotations": { "readOnlyHint": true, "destructiveHint": false, "idempotentHint": true, "openWorldHint": false },
       "inputSchema": {
@@ -90,7 +90,8 @@
         "required": ["conversation_id"],
         "properties": {
           "conversation_id": { "$ref": "#/$defs/ConversationId" },
-          "max_messages": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50, "description": "Keep only the most recent messages." }
+          "max_messages": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50, "description": "Keep only the most recent messages." },
+          "before": { "type": "string", "description": "A message id from this conversation (a message's id, or next_before from a previous call). Returns the messages that come before it, still oldest first, so a long thread can be read in steps." }
         }
       },
       "outputSchema": {
@@ -102,6 +103,7 @@
           "channel": { "type": "string" },
           "handover_status": { "$ref": "#/$defs/HandoverStatus" },
           "truncated": { "type": "boolean", "description": "True when older messages were left out because of max_messages." },
+          "next_before": { "type": "string", "description": "Only when truncated: pass it as before to read the messages that come before the ones returned." },
           "messages": {
             "type": "array",
             "items": {

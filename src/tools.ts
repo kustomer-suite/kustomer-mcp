@@ -1,4 +1,4 @@
-import type { KustomerApi } from "./api.js";
+import { ApiError, type KustomerApi } from "./api.js";
 import { untrusted, type TextSource } from "./untrusted.js";
 
 export interface ToolContext {
@@ -115,12 +115,18 @@ const getConversation: ToolHandler = async (args, { api, redact }) => {
     { mark_read: false },
   );
   const all = data.messages ?? [];
-  const kept = all.slice(-args.max_messages);
+  // `before` is a message id of this conversation; an id that is not in it (including one from another store's
+  // conversation, which this response never contains) is "not found", the same as an unknown conversation.
+  const end = args.before === undefined ? all.length : all.findIndex((m) => m.id === args.before);
+  if (end < 0) throw new ApiError(404, "message not found in this conversation");
+  const older = all.slice(0, end);
+  const kept = older.slice(-args.max_messages);
   return {
     id: data.conversation.id,
     channel: data.conversation.channel ?? "",
     handover_status: handoverStatus(data.conversation.handover_status),
-    truncated: kept.length < all.length,
+    truncated: kept.length < older.length,
+    ...(kept.length < older.length ? { next_before: kept[0]!.id } : {}),
     messages: kept.map((m) => {
       const who = author(m);
       const source: TextSource = who === "customer" ? "customer" : who === "agent" ? "agent" : "bot";
