@@ -8,7 +8,7 @@ import { handlers, type ToolContext } from "./tools.js";
 import { makeRedactor } from "./untrusted.js";
 
 export const SERVER_NAME = "kustomersuite-mcp";
-export const SERVER_VERSION = "1.0.0";
+export const SERVER_VERSION = "1.1.0";
 
 interface CompiledTool {
   spec: ToolSpec;
