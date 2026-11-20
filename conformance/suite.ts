@@ -187,6 +187,15 @@ export const checks: Check[] = [
       const kept = (short.messages as Array<{ id: string }>).map((x) => x.id);
       expect(fullIds.length === 4, `c1 has 4 messages, got ${fullIds.length}`);
       expect(short.truncated === true && JSON.stringify(kept) === JSON.stringify(fullIds.slice(-2)), `max_messages keeps the latest: ${kept}`);
+
+      // Reading in steps: next_before walks back through the thread without gaps or overlaps.
+      expect(typeof short.next_before === "string" && short.next_before === kept[0], "a truncated read says where to continue (next_before)");
+      const earlier = await ok(client, "get_conversation", { conversation_id: c1!.id, max_messages: 2, before: short.next_before as string });
+      const earlierIds = (earlier.messages as Array<{ id: string }>).map((x) => x.id);
+      expect(JSON.stringify(earlierIds) === JSON.stringify(fullIds.slice(0, 2)), `before reads the messages that come before it: ${earlierIds}`);
+      expect(earlier.truncated === false && earlier.next_before === undefined, "the first page of the thread is not truncated and has no next_before");
+      const unknown = await client.callTool({ name: "get_conversation", arguments: { conversation_id: c1!.id, before: "00000000-0000-4000-8000-000000000000" } });
+      expect(unknown.isError === true, "a before that is not a message of this conversation is an error");
     },
   },
   {
